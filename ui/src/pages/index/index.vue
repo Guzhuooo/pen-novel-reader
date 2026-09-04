@@ -16,15 +16,19 @@
 
     <!-- 继续阅读 -->
     <div class="hero press" v-if="lastBook" @click="openBook(lastBook.id, lastBook.path)">
-      <text class="herolabel">继续阅读</text>
-      <text class="herotitle">{{ lastBook.title }}</text>
-      <div class="herobar"><text class="herofill" :class="'wf' + heroStep"> </text></div>
-      <text class="heropct">{{ heroPercent }} · {{ lastWhen }}</text>
-      <text class="herogo">阅读 〉</text>
+      <div class="heroTop">
+        <text class="herochip">继续阅读</text>
+        <text class="herotitle">{{ lastBook.title }}</text>
+        <text class="heropct">{{ heroPercent }}</text>
+      </div>
+      <div class="heroBot">
+        <div class="herobar"><text class="herofill" :class="'wf' + heroStep"> </text></div>
+        <text class="herotime">{{ lastWhen }}</text>
+      </div>
     </div>
 
     <!-- 书架列表 -->
-    <scroller class="list" show-scrollbar="false" v-if="books.length > 0">
+    <scroller :class="lastBook ? 'list listLow' : 'list'" show-scrollbar="false" v-if="books.length > 0">
       <div v-for="(b, i) in books" :key="b.id" class="row">
         <div class="cover press" @click="openBook(b.id, b.path)"><text class="coverglyph">{{ coverGlyph(b.title) }}</text></div>
         <div class="rowmain press" @click="openBook(b.id, b.path)">
@@ -38,7 +42,7 @@
     </scroller>
 
     <!-- 空态 -->
-    <div class="empty" v-if="books.length === 0">
+    <div :class="lastBook ? 'empty emptyLow' : 'empty'" v-if="books.length === 0">
       <text class="emptyglyph">［　书　］</text>
       <text class="emptytip">书架还是空的。笔里已经有 txt 小说了吗？</text>
       <div class="btnSolid press" @click="goFiles"><text class="btnTextDark">去笔里找小说</text></div>
@@ -151,132 +155,135 @@ export default {
 
 .topbar {
   position: absolute;
-  left: 0px;
-  top: 0px;
-  width: 800px;
-  height: 52px;
+  left: 0vw;
+  top: 0vh;
+  width: 100vw;
+  height: 20.47vh;
   flex-direction: row;
   align-items: center;
-  padding-left: 16px;
-  padding-right: 16px;
+  padding-left: 2vw;
+  padding-right: 2vw;
   border-bottom-width: 1px;
   border-color: #1b2530;
 }
 .brand { flex-direction: row; align-items: center; flex: 1; }
 .brandmark {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 4.25vw;
+  height: 13.39vh;
+  border-radius: 1.12vw;
   background-color: #123a37;
   align-items: center;
   justify-content: center;
-  margin-right: 10px;
+  margin-right: 1.25vw;
 }
-.brandglyph { color: #4fd6c3; font-size: 17px; }
+.brandglyph { color: #4fd6c3; font-size: 6.69vh; }
 .brandcol { flex-direction: column; }
-.brandtitle { color: #e8eef2; font-size: 17px; line-height: 22px; font-weight: bold; }
-.brandsub { color: #8ca0ad; font-size: 10px; line-height: 13px; }
+.brandtitle { color: #e8eef2; font-size: 6.69vh; line-height: 8.66vh; font-weight: bold; }
+.brandsub { color: #8ca0ad; font-size: 3.94vh; line-height: 5.12vh; }
 .topactions { flex-direction: row; }
-.btnGhost { width: 88px; height: 32px; border-radius: 9px; justify-content: center; align-items: center; background-color: #123a37; }
-.btnSolid { width: 140px; height: 36px; border-radius: 9px; justify-content: center; align-items: center; background-color: #4fd6c3; margin-top: 12px; }
-.btnTextAccent { color: #4fd6c3; font-size: 14px; }
-.btnTextDark { color: #0b0f14; font-size: 14px; font-weight: bold; }
+.btnGhost { width: 11vw; height: 12.6vh; border-radius: 1.12vw; justify-content: center; align-items: center; background-color: #123a37; }
+.btnSolid { width: 17.5vw; height: 14.17vh; border-radius: 1.12vw; justify-content: center; align-items: center; background-color: #4fd6c3; margin-top: 4.72vh; }
+.btnTextAccent { color: #4fd6c3; font-size: 5.51vh; }
+.btnTextDark { color: #0b0f14; font-size: 5.51vh; font-weight: bold; }
 
 .hero {
   position: absolute;
-  left: 16px;
-  top: 62px;
-  width: 768px;
-  height: 64px;
+  left: 2vw;
+  top: 24.41vh;
+  width: 96vw;
+  height: 25.2vh;
   background-color: #121922;
-  border-radius: 12px;
+  border-radius: 1.5vw;
   border-width: 1px;
   border-color: #263340;
-  flex-direction: row;
-  align-items: center;
-  padding-left: 14px;
-  padding-right: 14px;
+  flex-direction: column;
+  justify-content: center;
+  padding-left: 1.75vw;
+  padding-right: 1.75vw;
 }
-.herolabel {
+.heroTop { flex-direction: row; align-items: center; }
+.heroBot { flex-direction: row; align-items: center; margin-top: 3.54vh; }
+.herochip {
   color: #4fd6c3;
-  font-size: 11px;
-  width: 64px;
+  font-size: 3.94vh;
+  width: 7vw;
   border-width: 1px;
   border-color: #123a37;
-  border-radius: 6px;
-  padding: 3px 0px;
+  border-radius: 0.75vw;
+  padding-top: 0.79vh;
+  padding-bottom: 0.79vh;
   text-align: center;
 }
 .herotitle {
   color: #e8eef2;
-  font-size: 16px;
-  margin-left: 12px;
-  width: 300px;
+  font-size: 5.51vh;
+  margin-left: 1.25vw;
+  flex: 1;
   lines: 1;
   text-overflow: ellipsis;
 }
+.heropct { color: #f5b85c; font-size: 4.72vh; margin-left: 1.25vw; }
 .herobar {
-  width: 180px;
-  height: 6px;
-  border-radius: 3px;
+  flex: 1;
+  height: 2.36vh;
+  border-radius: 0.38vw;
   background-color: #19242f;
-  margin-left: 14px;
 }
-.herofill { height: 6px; border-radius: 3px; background-color: #4fd6c3; }
-.wf0 { width: 2px; }
-.wf1 { width: 18px; }
-.wf2 { width: 36px; }
-.wf3 { width: 54px; }
-.wf4 { width: 72px; }
-.wf5 { width: 90px; }
-.wf6 { width: 108px; }
-.wf7 { width: 126px; }
-.wf8 { width: 144px; }
-.wf9 { width: 162px; }
-.wf10 { width: 180px; }
-.heropct { color: #8ca0ad; font-size: 11px; margin-left: 14px; flex: 1; }
-.herogo { color: #f5b85c; font-size: 13px; }
-
+.herotime { color: #8ca0ad; font-size: 3.94vh; margin-left: 1.25vw; width: 11.25vw; text-align: right; }
+.herofill { height: 2.36vh; border-radius: 0.38vw; background-color: #4fd6c3; }
+.wf0 { width: 0.25vw; }
+.wf1 { width: 2.25vw; }
+.wf2 { width: 4.5vw; }
+.wf3 { width: 6.75vw; }
+.wf4 { width: 9vw; }
+.wf5 { width: 11.25vw; }
+.wf6 { width: 13.5vw; }
+.wf7 { width: 15.75vw; }
+.wf8 { width: 18vw; }
+.wf9 { width: 20.25vw; }
+.wf10 { width: 22.5vw; }
 .list {
   position: absolute;
-  left: 16px;
-  top: 62px;
-  width: 768px;
-  height: 182px;
+  left: 2vw;
+  top: 24.41vh;
+  width: 96vw;
+  height: 71.65vh;
 }
-.row { flex-direction: row; align-items: center; height: 56px; padding-left: 4px; padding-right: 4px; }
+.listLow { top: 52.76vh; height: 43.31vh; }
+.row { flex-direction: row; align-items: center; height: 22.05vh; padding-left: 0.5vw; padding-right: 0.5vw; }
 .cover {
-  width: 30px;
-  height: 42px;
-  border-radius: 6px;
+  width: 3.75vw;
+  height: 16.54vh;
+  border-radius: 0.75vw;
   background-color: #123a37;
   align-items: center;
   justify-content: center;
 }
-.coverglyph { color: #4fd6c3; font-size: 14px; }
-.rowmain { flex: 1; margin-left: 12px; flex-direction: column; }
+.coverglyph { color: #4fd6c3; font-size: 5.51vh; }
+.rowmain { flex: 1; margin-left: 1.5vw; flex-direction: column; }
 .rowtitle {
   color: #e8eef2;
-  font-size: 15px;
-  line-height: 20px;
+  font-size: 5.91vh;
+  line-height: 7.87vh;
   lines: 1;
   text-overflow: ellipsis;
 }
-.rowmeta { color: #8ca0ad; font-size: 11px; line-height: 15px; margin-top: 2px; }
-.more { width: 44px; height: 32px; align-items: center; justify-content: center; border-radius: 8px; background-color: #121922; }
-.moretext { color: #8ca0ad; font-size: 14px; }
-.sep { position: absolute; left: 46px; bottom: 0px; width: 722px; height: 1px; background-color: #1b2530; }
-.listpad { height: 8px; }
+.rowmeta { color: #8ca0ad; font-size: 4.33vh; line-height: 5.91vh; margin-top: 0.79vh; }
+.more { width: 5.5vw; height: 12.6vh; align-items: center; justify-content: center; border-radius: 1vw; background-color: #121922; }
+.moretext { color: #8ca0ad; font-size: 5.51vh; }
+.sep { position: absolute; left: 5.75vw; bottom: 0vh; width: 90.25vw; height: 0.39vh; background-color: #1b2530; }
+.listpad { height: 3.15vh; }
 
 .empty {
   position: absolute;
-  left: 0px;
-  top: 62px;
-  width: 800px;
-  height: 182px;
+  left: 0vw;
+  top: 24.41vh;
+  width: 100vw;
+  height: 71.65vh;
   align-items: center;
   justify-content: center;
 }
-.emptyglyph { color: #263340; font-size: 26px; }
-.emptytip { color: #8ca0ad; font-size: 13px; margin-top: 6px; }
+.emptyLow { top: 52.76vh; height: 43.31vh; }
+.emptyglyph { color: #263340; font-size: 10.24vh; }
+.emptytip { color: #8ca0ad; font-size: 5.12vh; margin-top: 2.36vh; }
 </style>

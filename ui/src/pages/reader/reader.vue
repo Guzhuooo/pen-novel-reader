@@ -17,12 +17,16 @@
       <text :class="['foottext', 'th' + theme + 'Mut']">{{ pct }}%</text>
     </div>
 
-    <!-- 点击翻页模式的屏幕两侧翻页键 -->
-    <div class="edge edgeL press" v-if="pageMode === 'tap'" @click="prevPage()"><text class="edgetext">〈</text></div>
-    <div class="edge edgeR press" v-if="pageMode === 'tap'" @click="nextPage()"><text class="edgetext">〉</text></div>
+    <!-- 手势层：左/中/右三个点击分区（click 驱动，不依赖坐标解析），touch 事件只负责滑动检测 -->
+    <div class="gestures">
+      <div class="gz gzL" @click="onZoneLeft($event)" @touchstart="onTouchStart" @touchend="onTouchEnd"></div>
+      <div class="gz gzM" @click="onZoneCenter($event)" @touchstart="onTouchStart" @touchend="onTouchEnd"></div>
+      <div class="gz gzR" @click="onZoneRight($event)" @touchstart="onTouchStart" @touchend="onTouchEnd"></div>
+    </div>
 
-    <!-- 触摸层：滑动翻页 / 点击分区翻页，其余唤出侧边栏 -->
-    <div class="touch" @touchstart="onTouchStart" @touchend="onTouchEnd"></div>
+    <!-- 屏幕两侧翻页键（点击模式显示；放在手势层之上保证可点） -->
+    <div class="edge edgeL press" v-if="pageMode === 'tap'" @click="prevPage($event)"><text class="edgetext">〈</text></div>
+    <div class="edge edgeR press" v-if="pageMode === 'tap'" @click="nextPage($event)"><text class="edgetext">〉</text></div>
 
     <!-- 侧边栏 -->
     <div class="mask" v-if="sidebarOpen" @click="closeSidebar">
@@ -223,8 +227,8 @@ export default {
       else if (delta > 0) this.toast('已经是最后一页')
       else if (delta < 0) this.toast('已经是第一页')
     },
-    nextPage() { this.turn(1) },
-    prevPage() { this.turn(-1) },
+    nextPage(e) { this.stop(e); this.turn(1) },
+    prevPage(e) { this.stop(e); this.turn(-1) },
     jump(delta, e) {
       this.stop(e)
       if (this.pagingPct < 100 && delta > 0) { this.toast('后面还在排版，稍等几秒'); return }
@@ -280,29 +284,59 @@ export default {
       lib.saveSettings({ fontSize: size })
       this.repaginate(keep)
     },
+    diag(tag, e) {
+      // TEMP-DIAG: 交互诊断，确认后移除
+      if (!this._diagN) this._diagN = 0
+      if (this._diagN >= 8) return
+      this._diagN++
+      let info = ''
+      try {
+        const arr = (e && e.changedTouches && e.changedTouches.length) ? e.changedTouches : (e && e.touches)
+        info = 'keys=' + (e ? Object.keys(e).join('|') : 'null') + ' touch=' + (arr ? JSON.stringify(arr[0]).slice(0, 160) : '-')
+      } catch (err) { info = 'sererr' }
+      console.error('[evt] ' + tag + ' ' + info)
+    },
+    // 三个点击分区：左=上一页，右=下一页，中=侧边栏（click 驱动，两种阅读方式都可用）
+    onZoneLeft(e) {
+      this.stop(e)
+      this.diag('zoneL', e)
+      if (this._suppressClick) return
+      this.prevPage()
+    },
+    onZoneRight(e) {
+      this.stop(e)
+      this.diag('zoneR', e)
+      if (this._suppressClick) return
+      this.nextPage()
+    },
+    onZoneCenter(e) {
+      this.stop(e)
+      this.diag('zoneM', e)
+      if (this._suppressClick) return
+      this.sidebarOpen = true
+    },
     onTouchStart(e) {
+      this.diag('tstart', e)
       const p = touchPoint(e)
       this._touch = p ? { x: p.x, y: p.y, t: Date.now() } : null
     },
     onTouchEnd(e) {
+      this.diag('tend', e)
       const start = this._touch
       this._touch = null
       if (!start || this.sidebarOpen) return
       const p = touchPoint(e)
-      if (!p) return
+      if (!p) return // 坐标不可用时仍有 click 分区兜底
       const dx = p.x - start.x
       const dy = p.y - start.y
       const dt = Date.now() - start.t
-      if (dt < 700 && Math.abs(dy) < 60) {
-        if (this.pageMode === 'swipe' && dx < -60) { this.nextPage(); return }
-        if (this.pageMode === 'swipe' && dx > 60) { this.prevPage(); return }
-      }
-      if (Math.abs(dx) < 24 && Math.abs(dy) < 24 && dt < 500) {
-        if (this.pageMode === 'tap') {
-          if (p.x < 200) { this.prevPage(); return }
-          if (p.x > 600) { this.nextPage(); return }
-        }
-        this.sidebarOpen = true
+      if (dt < 700 && Math.abs(dy) < 70 && Math.abs(dx) > 60) {
+        // 滑动翻页后抑制同一次触摸派生的 click，避免翻两页
+        this._suppressClick = true
+        const self = this
+        setTimeout(() => { self._suppressClick = false }, 450)
+        if (dx < 0) this.nextPage()
+        else this.prevPage()
       }
     },
     closeSidebar(e) {
@@ -342,9 +376,20 @@ export default {
 
 function touchPoint(e) {
   try {
-    if (e && e.changedTouches && e.changedTouches.length) return e.changedTouches[0]
-    if (e && e.touches && e.touches.length) return e.touches[0]
-    if (e && typeof e.pageX === 'number') return e
+    const arr = (e && e.changedTouches && e.changedTouches.length) ? e.changedTouches
+      : ((e && e.touches && e.touches.length) ? e.touches : null)
+    const t = arr ? arr[0] : e
+    if (t) {
+      const xs = ['pageX', 'clientX', 'screenX', 'x', 'offsetX']
+      const ys = ['pageY', 'clientY', 'screenY', 'y', 'offsetY']
+      for (let a = 0; a < xs.length; a++) {
+        if (typeof t[xs[a]] === 'number') {
+          for (let b = 0; b < ys.length; b++) {
+            if (typeof t[ys[b]] === 'number') return { x: t[xs[a]], y: t[ys[b]] }
+          }
+        }
+      }
+    }
   } catch (err) { /* 事件形态异常 */ }
   return null
 }
@@ -354,8 +399,8 @@ function touchPoint(e) {
 @import "../../styles/common.less";
 
 .rroot {
-  width: 800px;
-  height: 254px;
+  width: 100vw;
+  height: 100vh;
   position: relative;
 }
 .th0Bg { background-color: #0b0f14; }
@@ -385,80 +430,80 @@ function touchPoint(e) {
 
 .head {
   position: absolute;
-  left: 0px;
-  top: 0px;
-  width: 800px;
-  height: 40px;
+  left: 0vw;
+  top: 0vh;
+  width: 100vw;
+  height: 15.75vh;
   flex-direction: row;
   align-items: center;
-  padding-left: 8px;
-  padding-right: 8px;
+  padding-left: 1vw;
+  padding-right: 1vw;
 }
-.backbtn { width: 96px; height: 32px; justify-content: center; }
-.backtext { font-size: 14px; }
+.backbtn { width: 12vw; height: 12.6vh; justify-content: center; }
+.backtext { font-size: 5.51vh; }
 .title {
   flex: 1;
-  font-size: 13px;
+  font-size: 5.12vh;
   text-align: center;
   lines: 1;
   text-overflow: ellipsis;
 }
-.markbtn { width: 60px; height: 32px; align-items: center; justify-content: center; }
-.marktext { font-size: 18px; }
+.markbtn { width: 7.5vw; height: 12.6vh; align-items: center; justify-content: center; }
+.marktext { font-size: 7.09vh; }
 .markon { color: #f5b85c; }
 .markoff { color: #3a4c5c; }
 
 .body {
   position: absolute;
-  left: 20px;
-  top: 40px;
-  width: 760px;
-  height: 190px;
+  left: 2.5vw;
+  top: 15.75vh;
+  width: 95vw;
+  height: 74.8vh;
 }
-.pagescroller { width: 760px; height: 190px; }
+.pagescroller { width: 95vw; height: 74.8vh; }
 .pagetext { text-align: left; }
-.fs18 { font-size: 18px; line-height: 28px; }
-.fs20 { font-size: 20px; line-height: 30px; }
-.fs22 { font-size: 22px; line-height: 32px; }
-.fs24 { font-size: 24px; line-height: 34px; }
-.fs26 { font-size: 26px; line-height: 36px; }
+.fs18 { font-size: 7.09vh; line-height: 11.02vh; }
+.fs20 { font-size: 7.87vh; line-height: 11.81vh; }
+.fs22 { font-size: 8.66vh; line-height: 12.6vh; }
+.fs24 { font-size: 9.45vh; line-height: 13.39vh; }
+.fs26 { font-size: 10.24vh; line-height: 14.17vh; }
 
 .foot {
   position: absolute;
-  left: 20px;
-  bottom: 6px;
-  width: 760px;
-  height: 18px;
+  left: 2.5vw;
+  bottom: 2.36vh;
+  width: 95vw;
+  height: 7.09vh;
   flex-direction: row;
   align-items: center;
 }
-.foottext { font-size: 11px; }
+.foottext { font-size: 4.33vh; }
 .footbar {
   flex: 1;
-  height: 3px;
-  margin-left: 12px;
-  margin-right: 12px;
-  border-radius: 2px;
+  height: 1.18vh;
+  margin-left: 1.5vw;
+  margin-right: 1.5vw;
+  border-radius: 0.25vw;
   background-color: #19242f;
 }
-.footfill { height: 3px; border-radius: 2px; background-color: #4fd6c3; }
-.ff1 { width: 76px; }
-.ff2 { width: 152px; }
-.ff3 { width: 228px; }
-.ff4 { width: 304px; }
-.ff5 { width: 380px; }
-.ff6 { width: 456px; }
-.ff7 { width: 532px; }
-.ff8 { width: 608px; }
-.ff9 { width: 684px; }
-.ff10 { width: 760px; }
+.footfill { height: 1.18vh; border-radius: 0.25vw; background-color: #4fd6c3; }
+.ff1 { width: 9.5vw; }
+.ff2 { width: 19vw; }
+.ff3 { width: 28.5vw; }
+.ff4 { width: 38vw; }
+.ff5 { width: 47.5vw; }
+.ff6 { width: 57vw; }
+.ff7 { width: 66.5vw; }
+.ff8 { width: 76vw; }
+.ff9 { width: 85.5vw; }
+.ff10 { width: 95vw; }
 
 .edge {
   position: absolute;
-  top: 96px;
-  width: 44px;
-  height: 78px;
-  border-radius: 10px;
+  top: 37.8vh;
+  width: 5.5vw;
+  height: 30.71vh;
+  border-radius: 1.25vw;
   background-color: #16202a;
   border-width: 1px;
   border-color: #263340;
@@ -466,151 +511,159 @@ function touchPoint(e) {
   justify-content: center;
   z-index: 3;
 }
-.edgeL { left: 6px; }
-.edgeR { right: 6px; }
-.edgetext { color: #4fd6c3; font-size: 22px; }
+.edgeL { left: 0.75vw; }
+.edgeR { right: 0.75vw; }
+.edgetext { color: #4fd6c3; font-size: 8.66vh; }
 
-.touch {
+.gestures {
   position: absolute;
-  left: 0px;
-  top: 0px;
-  width: 800px;
-  height: 254px;
+  left: 0vw;
+  top: 0vh;
+  width: 100vw;
+  height: 100vh;
   z-index: 2;
+}
+.gz {
+  position: absolute;
+  top: 0vh;
+  height: 100vh;
   background-color: rgba(0, 0, 0, 0.001);
 }
+.gzL { left: 0vw; width: 25vw; }
+.gzM { left: 25vw; width: 50vw; }
+.gzR { left: 75vw; width: 25vw; }
 
 .mask {
   position: absolute;
-  left: 0px;
-  top: 0px;
-  width: 800px;
-  height: 254px;
+  left: 0vw;
+  top: 0vh;
+  width: 100vw;
+  height: 100vh;
   background-color: rgba(5, 8, 12, 0.6);
   z-index: 10;
 }
 .side {
   position: absolute;
-  left: 0px;
-  top: 0px;
-  width: 300px;
-  height: 254px;
+  left: 0vw;
+  top: 0vh;
+  width: 37.5vw;
+  height: 100vh;
   background-color: #121922;
   border-right-width: 1px;
   border-color: #263340;
-  padding-top: 8px;
-  padding-bottom: 6px;
-  padding-left: 14px;
-  padding-right: 14px;
+  padding-top: 3.15vh;
+  padding-bottom: 2.36vh;
+  padding-left: 1.75vw;
+  padding-right: 1.75vw;
   z-index: 11;
 }
-.srow { flex-direction: row; align-items: center; margin-top: 6px; }
-.sh { margin-top: 0px; justify-content: space-between; }
-.stitle { color: #e8eef2; font-size: 14px; font-weight: bold; }
+.srow { flex-direction: row; align-items: center; margin-top: 2.36vh; }
+.sh { margin-top: 0vh; justify-content: space-between; }
+.stitle { color: #e8eef2; font-size: 5.51vh; font-weight: bold; }
 .sclose {
-  min-width: 52px;
-  height: 24px;
-  border-radius: 7px;
+  min-width: 6.5vw;
+  height: 9.45vh;
+  border-radius: 0.88vw;
   background-color: #123a37;
   align-items: center;
   justify-content: center;
 }
-.sclosetext { color: #4fd6c3; font-size: 12px; }
-.slabel { color: #8ca0ad; font-size: 12px; width: 34px; }
-.slabel2 { color: #8ca0ad; font-size: 12px; margin-left: 18px; }
+.sclosetext { color: #4fd6c3; font-size: 4.72vh; }
+.slabel { color: #8ca0ad; font-size: 4.72vh; width: 4.25vw; }
+.slabel2 { color: #8ca0ad; font-size: 4.72vh; margin-left: 2.25vw; }
 .sseg {
-  width: 34px;
-  height: 26px;
-  border-radius: 7px;
+  width: 4.25vw;
+  height: 10.24vh;
+  border-radius: 0.88vw;
   background-color: #19242f;
   border-width: 1px;
   border-color: #263340;
   align-items: center;
   justify-content: center;
-  margin-left: 8px;
+  margin-left: 1vw;
 }
-.ssegtext { color: #e8eef2; font-size: 13px; }
-.sfontbox { width: 38px; height: 26px; align-items: center; justify-content: center; }
-.sfontval { color: #4fd6c3; font-size: 13px; }
+.ssegtext { color: #e8eef2; font-size: 5.12vh; }
+.sfontbox { width: 4.75vw; height: 10.24vh; align-items: center; justify-content: center; }
+.sfontval { color: #4fd6c3; font-size: 5.12vh; }
 .spair {
   flex-direction: row;
-  margin-left: 8px;
-  border-radius: 7px;
+  margin-left: 1vw;
+  border-radius: 0.88vw;
   border-width: 1px;
   border-color: #263340;
   overflow: hidden;
 }
-.sopt { width: 44px; height: 26px; align-items: center; justify-content: center; }
+.sopt { width: 5.5vw; height: 10.24vh; align-items: center; justify-content: center; }
 .opton { background-color: #123a37; }
 .optoff { background-color: #19242f; }
-.sopttext { font-size: 11px; }
+.sopttext { font-size: 4.33vh; }
 .optontext { color: #4fd6c3; }
 .optofftext { color: #8ca0ad; }
 
-.themesw { width: 238px; height: 46px; }
-.chipbox { width: 39px; align-items: center; }
+.themesw { width: 29.75vw; height: 18.11vh; }
+.chipbox { width: 4.88vw; align-items: center; }
 .chip {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: 3.25vw;
+  height: 10.24vh;
+  border-radius: 0.88vw;
   align-items: center;
   justify-content: center;
 }
 .chipOn { background-color: #4fd6c3; border-width: 2px; border-color: #4fd6c3; }
 .chipOff { border-width: 1px; border-color: #263340; }
-.chiptext { color: #0b0f14; font-size: 13px; font-weight: bold; }
-.chiplabel { color: #8ca0ad; font-size: 9px; margin-top: 2px; }
+.chiptext { color: #0b0f14; font-size: 5.12vh; font-weight: bold; }
+.chiplabel { color: #8ca0ad; font-size: 3.54vh; margin-top: 0.79vh; }
 
 .sjump {
-  width: 62px;
-  height: 26px;
-  border-radius: 7px;
+  width: 7.75vw;
+  height: 10.24vh;
+  border-radius: 0.88vw;
   background-color: #19242f;
   border-width: 1px;
   border-color: #263340;
   align-items: center;
   justify-content: center;
 }
-.sjumptext { color: #8ca0ad; font-size: 11px; }
-.spageinfo { flex: 1; color: #4fd6c3; font-size: 11px; text-align: center; }
+.sjumptext { color: #8ca0ad; font-size: 4.33vh; }
+.spageinfo { flex: 1; color: #4fd6c3; font-size: 4.33vh; text-align: center; }
 
-.smarks { margin-top: 6px; }
-.smarksh { height: 18px; }
-.marklist { width: 272px; height: 60px; }
-.mrow0 { padding: 4px; }
-.markempty { color: #5c7182; font-size: 11px; }
-.markrow { flex-direction: row; align-items: center; height: 28px; }
+.smarks { margin-top: 2.36vh; }
+.smarksh { height: 7.09vh; }
+.marklist { width: 34vw; height: 23.62vh; }
+.mrow0 { padding: 0.5vw; }
+.markempty { color: #5c7182; font-size: 4.33vh; }
+.markrow { flex-direction: row; align-items: center; height: 11.02vh; }
 .markmain { flex: 1; flex-direction: row; align-items: center; }
-.markpage { color: #f5b85c; font-size: 11px; width: 40px; }
+.markpage { color: #f5b85c; font-size: 4.33vh; width: 5vw; }
 .markpreview {
   flex: 1;
   color: #8ca0ad;
-  font-size: 11px;
+  font-size: 4.33vh;
   lines: 1;
   text-overflow: ellipsis;
-  margin-right: 8px;
+  margin-right: 1vw;
 }
 .markdel {
-  width: 34px;
-  height: 22px;
-  border-radius: 6px;
+  width: 4.25vw;
+  height: 8.66vh;
+  border-radius: 0.75vw;
   background-color: #19242f;
   align-items: center;
   justify-content: center;
 }
-.markdeltext { color: #ff6b72; font-size: 10px; }
-.msep { position: absolute; left: 0px; bottom: 0px; width: 272px; height: 1px; background-color: #1b2530; }
+.markdeltext { color: #ff6b72; font-size: 3.94vh; }
+.msep { position: absolute; left: 0vw; bottom: 0vh; width: 34vw; height: 0.39vh; background-color: #1b2530; }
 
-.sfoot { margin-top: 5px; flex-direction: row; }
+.sfoot { margin-top: 1.97vh; flex-direction: row; }
 .sback {
-  width: 272px;
-  height: 26px;
-  border-radius: 8px;
+  width: 34vw;
+  height: 10.24vh;
+  border-radius: 1vw;
   background-color: #19242f;
   border-width: 1px;
   border-color: #263340;
   align-items: center;
   justify-content: center;
 }
-.sbacktext { color: #8ca0ad; font-size: 12px; }
+.sbacktext { color: #8ca0ad; font-size: 4.72vh; }
 </style>

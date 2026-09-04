@@ -33,18 +33,18 @@ export default {
 @import "../styles/common.less";
 .toastbox {
   position: fixed;
-  left: 170px;
-  top: 96px;
-  width: 460px;
-  padding: 10px 16px;
+  left: 21.25vw;
+  top: 37.8vh;
+  width: 57.5vw;
+  padding: 1.25vw 2vw;
   background-color: #1f2c38;
-  border-radius: 8px;
+  border-radius: 1vw;
   z-index: 99;
 }
 .toasttext {
   color: #e8eef2;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 5.51vh;
+  line-height: 7.87vh;
   text-align: center;
 }
 </style>

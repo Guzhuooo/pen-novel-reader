@@ -176,58 +176,58 @@ export default {
 
 .topbar {
   position: absolute;
-  left: 0px;
-  top: 0px;
-  width: 800px;
-  height: 52px;
+  left: 0vw;
+  top: 0vh;
+  width: 100vw;
+  height: 20.47vh;
   flex-direction: row;
   align-items: center;
-  padding-left: 12px;
-  padding-right: 16px;
+  padding-left: 1.5vw;
+  padding-right: 2vw;
   border-bottom-width: 1px;
   border-color: #1b2530;
 }
-.backbtn { width: 92px; height: 36px; justify-content: center; }
-.backtext { color: #4fd6c3; font-size: 15px; }
+.backbtn { width: 11.5vw; height: 14.17vh; justify-content: center; }
+.backtext { color: #4fd6c3; font-size: 5.91vh; }
 .pathtext {
   flex: 1;
   color: #e8eef2;
-  font-size: 13px;
+  font-size: 5.12vh;
   lines: 1;
   text-overflow: ellipsis;
-  margin-left: 6px;
+  margin-left: 0.75vw;
 }
 
 .list {
   position: absolute;
-  left: 16px;
-  top: 58px;
-  width: 768px;
-  height: 188px;
+  left: 2vw;
+  top: 22.83vh;
+  width: 96vw;
+  height: 74.02vh;
 }
-.row { flex-direction: row; align-items: center; height: 52px; padding-left: 4px; padding-right: 4px; }
+.row { flex-direction: row; align-items: center; height: 20.47vh; padding-left: 0.5vw; padding-right: 0.5vw; }
 .glyphbox {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 3.75vw;
+  height: 11.81vh;
+  border-radius: 1vw;
   align-items: center;
   justify-content: center;
 }
 .gdir { background-color: #19242f; }
 .gtxt { background-color: #123a37; }
-.glyphtext { color: #8ca0ad; font-size: 12px; }
-.glyphtextacc { color: #4fd6c3; font-size: 12px; }
-.rowmain { flex: 1; margin-left: 12px; flex-direction: column; }
+.glyphtext { color: #8ca0ad; font-size: 4.72vh; }
+.glyphtextacc { color: #4fd6c3; font-size: 4.72vh; }
+.rowmain { flex: 1; margin-left: 1.5vw; flex-direction: column; }
 .rowtitle {
   color: #e8eef2;
-  font-size: 15px;
-  line-height: 20px;
+  font-size: 5.91vh;
+  line-height: 7.87vh;
   lines: 1;
   text-overflow: ellipsis;
 }
-.rowmeta { color: #8ca0ad; font-size: 11px; line-height: 15px; margin-top: 1px; }
-.chev { color: #263340; font-size: 14px; }
-.sep { position: absolute; left: 46px; bottom: 0px; width: 722px; height: 1px; background-color: #1b2530; }
-.listpad { padding: 8px; }
-.emptytip { color: #8ca0ad; font-size: 13px; }
+.rowmeta { color: #8ca0ad; font-size: 4.33vh; line-height: 5.91vh; margin-top: 0.39vh; }
+.chev { color: #263340; font-size: 5.51vh; }
+.sep { position: absolute; left: 5.75vw; bottom: 0vh; width: 90.25vw; height: 0.39vh; background-color: #1b2530; }
+.listpad { padding: 1vw; }
+.emptytip { color: #8ca0ad; font-size: 5.12vh; }
 </style>

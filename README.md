@@ -32,6 +32,11 @@
 
 详细画像与验证证据见 [profiles/youdao-dictpen-coco1826.md](profiles/youdao-dictpen-coco1826.md)。
 
+## 自适应布局
+
+全部页面按 800×254 设计稿以 `vw/vh` 单位编写（`tools/px2vwvh.py` 做的批量换算），
+宽度随屏宽、高度随屏高等比拉伸，换其他分辨率的词典笔只需确认逻辑分辨率即可。
+
 ## 已知限制
 
 - **编码**：设备端 `readText` 按 UTF-8 转码，GBK 文件的字节会被替换为 `U+FFFD`（有损）。

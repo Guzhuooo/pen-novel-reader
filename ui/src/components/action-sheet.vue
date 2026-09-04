@@ -35,45 +35,45 @@ export default {
 @import "../styles/common.less";
 .mask {
   position: fixed;
-  left: 0px;
-  top: 0px;
-  width: 800px;
-  height: 254px;
+  left: 0vw;
+  top: 0vh;
+  width: 100vw;
+  height: 100vh;
   background-color: rgba(5, 8, 12, 0.72);
   z-index: 90;
 }
 .sheet {
   position: absolute;
-  left: 490px;
-  top: 14px;
-  width: 290px;
-  height: 226px;
+  left: 61.25vw;
+  top: 5.51vh;
+  width: 36.25vw;
+  height: 88.98vh;
   background-color: #19242f;
-  border-radius: 12px;
+  border-radius: 1.5vw;
   border-width: 1px;
   border-color: #263340;
-  padding: 12px;
+  padding: 1.5vw;
 }
 .sheettitle {
   color: #8ca0ad;
-  font-size: 12px;
-  line-height: 18px;
-  margin-bottom: 4px;
+  font-size: 4.72vh;
+  line-height: 7.09vh;
+  margin-bottom: 1.57vh;
 }
 .sheetlist {
-  width: 266px;
-  height: 180px;
+  width: 33.25vw;
+  height: 70.87vh;
 }
 .srow {
-  height: 38px;
-  border-radius: 8px;
+  height: 14.96vh;
+  border-radius: 1vw;
   justify-content: center;
-  margin-top: 4px;
+  margin-top: 1.57vh;
   background-color: #121922;
 }
 .srowtext {
-  font-size: 15px;
-  line-height: 20px;
+  font-size: 5.91vh;
+  line-height: 7.87vh;
   text-align: center;
 }
 .srownormal { color: #e8eef2; }
