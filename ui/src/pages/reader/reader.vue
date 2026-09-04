@@ -89,7 +89,8 @@ import fs from '../../utils/pen-fs.js'
 import * as lib from '../../utils/library.js'
 import { normalizeRawText, encodingWarning } from '../../utils/text.js'
 import { IncrementalPaginator, pageOfOffset, pageCount, previewOf } from '../../utils/paginator.js'
-import { landscapeLayout } from '../../utils/coords.js'
+import { landscapeLayout, setScreen } from '../../utils/coords.js'
+import { detectScreen } from '../../utils/device.js'
 import { THEMES, clampTheme } from '../../utils/themes.js'
 import appToast from '../../components/app-toast.vue'
 
@@ -206,6 +207,8 @@ export default {
         this.pageMode = settings.pageMode === 'swipe' ? 'swipe' : 'tap'
         this.theme = clampTheme(settings.theme)
         this.marks = await lib.getMarks(id)
+        const scr = await detectScreen()
+        setScreen(scr.w, scr.h)
         const prog = await lib.getProgress(id)
         this.repaginate(prog ? prog.offset : 0)
         this.ready = true

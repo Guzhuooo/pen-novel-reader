@@ -1,4 +1,5 @@
 import { BasePage } from './base-page.js'
+import { detectScreen } from './utils/device.js'
 
 class App extends $falcon.App {
   onLaunch(options) {
@@ -7,6 +8,7 @@ class App extends $falcon.App {
       console.log('[shuge] launch env=' + JSON.stringify($falcon.env || {}).slice(0, 200))
     } catch (e) { /* 日志失败不影响启动 */ }
     $falcon.useDefaultBasePageClass(BasePage)
+    try { detectScreen() } catch (e) { /* 探测失败时阅读页会再取 */ }
   }
   onShow() { super.onShow() }
   onHide() { super.onHide() }
