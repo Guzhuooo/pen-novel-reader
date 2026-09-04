@@ -5,10 +5,21 @@
 //   2) 原生模块 fs（libjsapi_shuge.so，各 ABI 均可由 tools/build-all-releases.sh 编译）：
 //      fs.{listDir... 无 -> readdir/stat/readFile/exists}，readFile 按 UTF-8 解释。
 //   3) jsapi.scan（部分固件内置）。
-// 模块缺失时动态 import 的异常会被捕获，不影响应用启动。
-import custom from 'custom'
-
+// 注意：custom 与 fs 都必须是动态 import——静态 import 在模块缺失时会让整个
+// 模块链求值失败（页面白屏），动态 import 的异常可以捕获后走兜底。
 let fsModuleState = undefined // undefined=未探测, false=不可用, 否则为模块对象
+let customState = undefined
+
+async function customModule() {
+  if (customState !== undefined) return customState
+  try {
+    const m = await import('custom')
+    customState = (m && (m.default || m)) || null
+  } catch (e) {
+    customState = null
+  }
+  return customState
+}
 
 async function fsApi() {
   if (fsModuleState !== undefined) return fsModuleState || null
@@ -24,10 +35,9 @@ async function fsApi() {
   return null
 }
 
-function scanApi() {
-  try {
-    if (custom && custom.scan) return custom.scan
-  } catch (e) { /* 模块缺失 */ }
+async function scanApi() {
+  const c = await customModule()
+  if (c && c.scan) return c.scan
   try {
     const jsapi = $falcon && $falcon.jsapi
     if (jsapi && jsapi.scan) return jsapi.scan
@@ -41,7 +51,7 @@ function unwrap(result) {
 }
 
 export async function listDir(path) {
-  const scan = scanApi()
+  const scan = await scanApi()
   if (!scan || typeof scan.listDir !== 'function') throw new Error('scan api unavailable')
   const raw = unwrap(await scan.listDir(String(path)))
   if (Array.isArray(raw)) {
@@ -56,7 +66,7 @@ export async function listDir(path) {
 }
 
 export async function readText(path) {
-  const scan = scanApi()
+  const scan = await scanApi()
   if (!scan || typeof scan.readText !== 'function') throw new Error('readText api unavailable')
   const raw = unwrap(await scan.readText(String(path)))
   if (typeof raw !== 'string' || raw === '') throw new Error('cannot read text: ' + path)
@@ -64,14 +74,14 @@ export async function readText(path) {
 }
 
 export async function exists(path) {
-  const scan = scanApi()
+  const scan = await scanApi()
   if (!scan || typeof scan.exists !== 'function') return false
   const raw = unwrap(await scan.exists(String(path)))
   return raw === true || (raw && typeof raw === 'object' && raw.exists === true)
 }
 
 export async function fileInfo(path) {
-  const scan = scanApi()
+  const scan = await scanApi()
   if (!scan || typeof scan.fileInfo !== 'function') throw new Error('fileInfo api unavailable')
   const raw = unwrap(await scan.fileInfo(String(path)))
   const info = raw && raw.data ? raw.data : raw

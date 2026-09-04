@@ -1,0 +1,40 @@
+{
+  "appName": "书阁",
+  "version": "1.3.0",
+  "appid": "8001876543210987",
+  "icon": "app_icon.png",
+  "quickjs": {
+    "version": "20200705",
+    "bigNum": false
+  },
+  "cert": {
+    "app-toast-0b95471d.js.bin": {
+      "size": 4942,
+      "md5": "a52408dd5d2c3556335b471dc6b70fe4"
+    },
+    "app.js.bin": {
+      "size": 2873,
+      "md5": "c7227be813bee2b28e1c7e64a78e0801"
+    },
+    "device-949d02a5.js.bin": {
+      "size": 682,
+      "md5": "5cc3ed53741ff9bde08f82f663f2215e"
+    },
+    "files.js.bin": {
+      "size": 8261,
+      "md5": "c62daca9c73a901ed51f1607515b678e"
+    },
+    "index.js.bin": {
+      "size": 19307,
+      "md5": "1420e6640849d11008800166df6153c4"
+    },
+    "pen-fs-8206947d.js.bin": {
+      "size": 1455,
+      "md5": "191f485e64c629f078ef926b53c28973"
+    },
+    "reader.js.bin": {
+      "size": 136,
+      "md5": "d1705cb36d0969fb7f49be5772ac61e2"
+    }
+  }
+}
