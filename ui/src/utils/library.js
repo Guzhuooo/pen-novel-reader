@@ -18,7 +18,7 @@ export function titleFromPath(path) {
   return base.replace(/\.(txt|text|log)$/i, '')
 }
 
-export const DEFAULT_SETTINGS = { pageMode: 'keys', fontSize: 22 }
+export const DEFAULT_SETTINGS = { pageMode: 'tap', theme: 0, fontSize: 22 }
 
 export async function getShelf() {
   const list = await kv.getItem(K_SHELF, [])

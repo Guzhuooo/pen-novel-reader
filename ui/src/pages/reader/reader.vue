@@ -1,63 +1,77 @@
 <template>
-  <div class="screen">
+  <div :class="['rroot', 'th' + theme + 'Bg']">
     <!-- 阅读内容层 -->
     <div class="head">
-      <div class="backbtn press" @click="goBack"><text class="backtext">〈 书架</text></div>
-      <text class="title">{{ title }}</text>
-      <div class="markbtn press" @click="addMarkHere"><text class="marktext" :class="pageMarked ? 'markon' : 'markoff'">{{ pageMarked ? '★' : '☆' }}</text></div>
+      <div class="backbtn press" @click="goBack"><text :class="['backtext', 'th' + theme + 'Mut']">〈 书架</text></div>
+      <text :class="['title', 'th' + theme + 'Mut']">{{ titleDisplay }}</text>
+      <div class="markbtn press" @click="addMarkHere($event)"><text class="marktext" :class="pageMarked ? 'markon' : 'markoff'">{{ pageMarked ? '★' : '☆' }}</text></div>
     </div>
     <div class="body">
       <scroller class="pagescroller" show-scrollbar="false">
-        <text class="pagetext" :class="'fs' + fontSize">{{ pageText }}</text>
+        <text :class="['pagetext', 'fs' + fontSize, 'th' + theme + 'Text']">{{ pageText }}</text>
       </scroller>
     </div>
     <div class="foot">
-      <text class="foottext">{{ pageTextShort }}</text>
+      <text :class="['foottext', 'th' + theme + 'Mut']">{{ pageTextShort }}</text>
       <div class="footbar"><text class="footfill" :class="'ff' + pctStep"> </text></div>
-      <text class="foottext">{{ pct }}%</text>
+      <text :class="['foottext', 'th' + theme + 'Mut']">{{ pct }}%</text>
     </div>
 
-    <!-- 按键模式的翻页按钮（覆盖在触摸层之上） -->
-    <div class="edge edgeL press" v-if="pageMode === 'keys'" @click="prevPage"><text class="edgetext">〈</text></div>
-    <div class="edge edgeR press" v-if="pageMode === 'keys'" @click="nextPage"><text class="edgetext">〉</text></div>
+    <!-- 点击翻页模式的屏幕两侧翻页键 -->
+    <div class="edge edgeL press" v-if="pageMode === 'tap'" @click="prevPage()"><text class="edgetext">〈</text></div>
+    <div class="edge edgeR press" v-if="pageMode === 'tap'" @click="nextPage()"><text class="edgetext">〉</text></div>
 
-    <!-- 触摸层：点按切换菜单，滑动翻页 -->
+    <!-- 触摸层：滑动翻页 / 点击分区翻页，其余唤出侧边栏 -->
     <div class="touch" @touchstart="onTouchStart" @touchend="onTouchEnd"></div>
 
-    <!-- 菜单层 -->
-    <div class="mask" v-if="menuOpen" @click="closeMenu">
-      <div class="menu" @click="noop($event)">
-        <div class="mrow">
-          <text class="mtitle">阅读设置</text>
-          <text class="mbook">{{ title }}</text>
-          <div class="mbtn press" @click="closeMenu($event)"><text class="mbtnTextSolid">完成</text></div>
+    <!-- 侧边栏 -->
+    <div class="mask" v-if="sidebarOpen" @click="closeSidebar">
+      <div class="side" @click="noop($event)">
+        <div class="srow sh">
+          <text class="stitle">阅读设置</text>
+          <div class="sclose press" @click="closeSidebar($event)"><text class="sclosetext">完成</text></div>
         </div>
-        <div class="mrow2">
-          <text class="mlabel">字号</text>
-          <div class="seg press" @click="fontSmaller($event)"><text class="segtext">－</text></div>
-          <div class="fontbox"><text class="fontval">{{ fontSize }}</text></div>
-          <div class="seg press" @click="fontBigger($event)"><text class="segtext">＋</text></div>
-          <text class="mlabel2">翻页</text>
-          <div class="segpair">
-            <div class="segopt press" :class="pageMode === 'keys' ? 'segon' : 'segoff'" @click="setMode('keys', $event)"><text class="segopttext" :class="pageMode === 'keys' ? 'segontext' : 'segofftext'">按键</text></div>
-            <div class="segopt press" :class="pageMode === 'swipe' ? 'segon' : 'segoff'" @click="setMode('swipe', $event)"><text class="segopttext" :class="pageMode === 'swipe' ? 'segontext' : 'segofftext'">滑动</text></div>
+        <div class="srow">
+          <text class="slabel">字号</text>
+          <div class="sseg press" @click="fontStep(-1, $event)"><text class="ssegtext">－</text></div>
+          <div class="sfontbox"><text class="sfontval">{{ fontSize }}</text></div>
+          <div class="sseg press" @click="fontStep(1, $event)"><text class="ssegtext">＋</text></div>
+          <text class="slabel2">阅读</text>
+          <div class="spair">
+            <div class="sopt press" :class="pageMode === 'swipe' ? 'opton' : 'optoff'" @click="setMode('swipe', $event)"><text class="sopttext" :class="pageMode === 'swipe' ? 'optontext' : 'optofftext'">滑动</text></div>
+            <div class="sopt press" :class="pageMode === 'tap' ? 'opton' : 'optoff'" @click="setMode('tap', $event)"><text class="sopttext" :class="pageMode === 'tap' ? 'optontext' : 'optofftext'">点击</text></div>
           </div>
-          <div class="mbtn press" @click="jump(-10, $event)"><text class="mbtntext">−10页</text></div>
-          <div class="mbtn press" @click="jump(10, $event)"><text class="mbtntext">+10页</text></div>
         </div>
-        <div class="mrow3">
-          <div class="markline press" v-if="!showMarks" @click="openMarks($event)"><text class="marklinetext">书签 {{ marks.length }} 个 ></text></div>
-          <scroller class="marklist" show-scrollbar="false" v-if="showMarks">
-            <div class="mrow0" v-if="marks.length === 0"><text class="markempty">还没有书签。翻到想标记的页，点右上角 ☆。</text></div>
+        <div class="srow">
+          <text class="slabel">背景</text>
+          <scroller class="themesw" show-scrollbar="false" scroll-direction="horizontal">
+            <div v-for="(t, i) in themeList" :key="i" class="chipbox press" @click="setTheme(i, $event)">
+              <div :class="theme === i ? 'chip chipOn' : 'chip chipOff th' + i + 'Sw'"><text class="chiptext">{{ theme === i ? '✓' : ' ' }}</text></div>
+              <text class="chiplabel">{{ t.name }}</text>
+            </div>
+          </scroller>
+        </div>
+        <div class="srow">
+          <div class="sjump press" @click="jump(-10, $event)"><text class="sjumptext">−10页</text></div>
+          <text class="spageinfo">{{ pageTextShort }}</text>
+          <div class="sjump press" @click="jump(10, $event)"><text class="sjumptext">+10页</text></div>
+        </div>
+        <div class="smarks">
+          <div class="smarksh"><text class="slabel">书签 {{ marks.length }}</text></div>
+          <scroller class="marklist" show-scrollbar="false">
+            <div class="mrow0" v-if="marks.length === 0"><text class="markempty">点右上角 ☆ 收藏当前页</text></div>
             <div v-for="(m, i) in marks" :key="m.offset" class="markrow">
               <div class="markmain press" @click="gotoMark(m, $event)">
-                <text class="markpage">第 {{ markPage(m) + 1 }} 页</text>
+                <text class="markpage">P{{ markPage(m) + 1 }}</text>
                 <text class="markpreview">{{ m.preview }}</text>
               </div>
               <div class="markdel press" @click="delMark(m, $event)"><text class="markdeltext">删</text></div>
               <div class="msep" v-if="i < marks.length - 1"></div>
             </div>
           </scroller>
+        </div>
+        <div class="sfoot">
+          <div class="sback press" @click="goBack($event)"><text class="sbacktext">返回书架</text></div>
         </div>
       </div>
     </div>
@@ -70,9 +84,12 @@
 import fs from '../../utils/pen-fs.js'
 import * as lib from '../../utils/library.js'
 import { normalizeRawText, encodingWarning } from '../../utils/text.js'
-import { paginate, pageOfOffset, pageCount, previewOf } from '../../utils/paginator.js'
+import { IncrementalPaginator, pageOfOffset, pageCount, previewOf } from '../../utils/paginator.js'
 import { landscapeLayout } from '../../utils/coords.js'
+import { THEMES, clampTheme } from '../../utils/themes.js'
 import appToast from '../../components/app-toast.vue'
+
+const FONT_SIZES = [18, 20, 22, 24, 26]
 
 export default {
   components: { 'app-toast': appToast },
@@ -80,18 +97,23 @@ export default {
     return {
       title: '…',
       fontSize: 22,
-      pageMode: 'keys',
+      pageMode: 'tap',
+      theme: 0,
+      themeList: THEMES,
       page: 0,
       offsets: [0, 0],
       marks: [],
-      menuOpen: false,
-      showMarks: false,
+      sidebarOpen: false,
+      pagingPct: 100,
       ready: false,
       pct: 0,
       pctStep: 1
     }
   },
   computed: {
+    titleDisplay() {
+      return this.pagingPct < 100 ? '排版中 ' + this.pagingPct + '%' : this.title
+    },
     pageText() {
       const t = this._text || ''
       const a = this.offsets[this.page] || 0
@@ -126,9 +148,33 @@ export default {
     },
     repaginate(keepOffset) {
       const lay = this.layout()
-      this.offsets = paginate(this._text || '', lay.charsPerLine, lay.linesPerPage)
-      this.page = Math.min(pageOfOffset(this.offsets, keepOffset), pageCount(this.offsets) - 1)
-      this.updatePct()
+      this._paginator = new IncrementalPaginator(this._text || '', lay.charsPerLine, lay.linesPerPage)
+      this._pendingKeep = keepOffset || 0
+      this.offsets = [0]
+      this.page = 0
+      this.pagingPct = 0
+      this.runPaging()
+    },
+    runPaging() {
+      if (this._pagingTimer) clearTimeout(this._pagingTimer)
+      const tick = () => {
+        const pg = this._paginator
+        if (!pg) return
+        pg.step(160000)
+        this.offsets = pg.offsets.slice()
+        this.pagingPct = pg.progress()
+        if (!pg.done) {
+          this._pagingTimer = setTimeout(tick, 0)
+          return
+        }
+        this.pagingPct = 100
+        const keep = this._pendingKeep || 0
+        this._pendingKeep = 0
+        this.page = Math.min(pageOfOffset(pg.offsets, keep), pageCount(pg.offsets) - 1)
+        this.updatePct()
+        this.queueSave()
+      }
+      tick()
     },
     updatePct() {
       const total = pageCount(this.offsets)
@@ -143,21 +189,25 @@ export default {
         this.$page.finish()
         return
       }
+      this._id = id
       this.title = lib.titleFromPath(path)
       try {
         const raw = await fs.readText(path)
         const { text, lossy } = normalizeRawText(raw)
+        this._text = text
         if (lossy) this.toast(encodingWarning(true))
         const settings = await lib.getSettings()
         this.fontSize = settings.fontSize
-        this.pageMode = settings.pageMode
+        // 旧版本的 keys 模式并入点击翻页
+        this.pageMode = settings.pageMode === 'swipe' ? 'swipe' : 'tap'
+        this.theme = clampTheme(settings.theme)
         this.marks = await lib.getMarks(id)
         const prog = await lib.getProgress(id)
         this.repaginate(prog ? prog.offset : 0)
         this.ready = true
       } catch (e) {
         this.toast('打开失败：' + path)
-        setTimeout(() => this.$page.finish(), 1200)
+        setTimeout(() => this.$page.finish(), 1500)
       }
     },
     turn(delta) {
@@ -167,22 +217,33 @@ export default {
         this.page = next
         this.updatePct()
         this.queueSave()
-      } else if (delta !== 0) {
-        this.toast(delta > 0 ? '已经是最后一页' : '已经是第一页')
+        return
       }
+      if (delta > 0 && this.pagingPct < 100) this.toast('后面还在排版，稍等几秒')
+      else if (delta > 0) this.toast('已经是最后一页')
+      else if (delta < 0) this.toast('已经是第一页')
     },
     nextPage() { this.turn(1) },
     prevPage() { this.turn(-1) },
-    jump(delta, e) { this.stop(e); this.turn(delta) },
+    jump(delta, e) {
+      this.stop(e)
+      if (this.pagingPct < 100 && delta > 0) { this.toast('后面还在排版，稍等几秒'); return }
+      this.turn(delta)
+    },
     gotoMark(m, e) {
       this.stop(e)
+      const last = this.offsets[this.offsets.length - 1] || 0
+      if (this.pagingPct < 100 && m.offset > last) {
+        this.toast('目标页还没排版好，稍后再试')
+        return
+      }
       this.page = Math.min(pageOfOffset(this.offsets, m.offset), pageCount(this.offsets) - 1)
       this.updatePct()
       this.queueSave()
-      this.showMarks = false
-      this.menuOpen = false
+      this.sidebarOpen = false
     },
-    async addMarkHere() {
+    async addMarkHere(e) {
+      this.stop(e)
       const id = this._id
       const offset = this.offsets[this.page] || 0
       const list = await lib.addMark(id, { offset, preview: previewOf(this._text || '', offset) })
@@ -196,23 +257,21 @@ export default {
     markPage(m) {
       return pageOfOffset(this.offsets, m.offset)
     },
-    openMarks(e) { this.stop(e); this.showMarks = true },
     setMode(mode, e) {
       this.stop(e)
       this.pageMode = mode
       lib.saveSettings({ pageMode: mode })
     },
-    fontSmaller(e) {
+    setTheme(i, e) {
       this.stop(e)
-      const sizes = [18, 20, 22, 24, 26]
-      const i = sizes.indexOf(this.fontSize)
-      this.applyFontSize(sizes[Math.max(0, (i < 0 ? 2 : i) - 1)])
+      this.theme = clampTheme(i)
+      lib.saveSettings({ theme: this.theme })
     },
-    fontBigger(e) {
+    fontStep(dir, e) {
       this.stop(e)
-      const sizes = [18, 20, 22, 24, 26]
-      const i = sizes.indexOf(this.fontSize)
-      this.applyFontSize(sizes[Math.min(sizes.length - 1, (i < 0 ? 2 : i) + 1)])
+      const i = FONT_SIZES.indexOf(this.fontSize)
+      const next = FONT_SIZES[Math.min(FONT_SIZES.length - 1, Math.max(0, (i < 0 ? 2 : i) + dir))]
+      this.applyFontSize(next)
     },
     applyFontSize(size) {
       if (size === this.fontSize) return
@@ -228,23 +287,27 @@ export default {
     onTouchEnd(e) {
       const start = this._touch
       this._touch = null
-      if (!start || this.menuOpen) return
+      if (!start || this.sidebarOpen) return
       const p = touchPoint(e)
       if (!p) return
       const dx = p.x - start.x
       const dy = p.y - start.y
       const dt = Date.now() - start.t
-      if (this.pageMode === 'swipe' && dt < 700) {
-        if (dx < -60 && Math.abs(dy) < 60) { this.nextPage(); return }
-        if (dx > 60 && Math.abs(dy) < 60) { this.prevPage(); return }
+      if (dt < 700 && Math.abs(dy) < 60) {
+        if (this.pageMode === 'swipe' && dx < -60) { this.nextPage(); return }
+        if (this.pageMode === 'swipe' && dx > 60) { this.prevPage(); return }
       }
       if (Math.abs(dx) < 24 && Math.abs(dy) < 24 && dt < 500) {
-        this.menuOpen = true
+        if (this.pageMode === 'tap') {
+          if (p.x < 200) { this.prevPage(); return }
+          if (p.x > 600) { this.nextPage(); return }
+        }
+        this.sidebarOpen = true
       }
     },
-    closeMenu(e) {
+    closeSidebar(e) {
       this.stop(e)
-      this.menuOpen = false
+      this.sidebarOpen = false
     },
     queueSave() {
       if (this._saveTimer) clearTimeout(this._saveTimer)
@@ -273,6 +336,7 @@ export default {
   onUnload() {
     this.flushSave()
     if (this._saveTimer) clearTimeout(this._saveTimer)
+    if (this._pagingTimer) clearTimeout(this._pagingTimer)
   }
 }
 
@@ -289,6 +353,36 @@ function touchPoint(e) {
 <style lang="less" scoped>
 @import "../../styles/common.less";
 
+.rroot {
+  width: 800px;
+  height: 254px;
+  position: relative;
+}
+.th0Bg { background-color: #0b0f14; }
+.th1Bg { background-color: #101828; }
+.th2Bg { background-color: #0f1a14; }
+.th3Bg { background-color: #211d15; }
+.th4Bg { background-color: #000000; }
+.th5Bg { background-color: #e8e4da; }
+.th0Text { color: #d7e2e8; }
+.th1Text { color: #c9d6ea; }
+.th2Text { color: #cfe6d4; }
+.th3Text { color: #e6dcc3; }
+.th4Text { color: #b8c0c6; }
+.th5Text { color: #33322e; }
+.th0Mut { color: #5c7182; }
+.th1Mut { color: #5a6c85; }
+.th2Mut { color: #5d7a67; }
+.th3Mut { color: #8a8069; }
+.th4Mut { color: #555f66; }
+.th5Mut { color: #8a867c; }
+.th0Sw { background-color: #0b0f14; }
+.th1Sw { background-color: #101828; }
+.th2Sw { background-color: #0f1a14; }
+.th3Sw { background-color: #211d15; }
+.th4Sw { background-color: #000000; }
+.th5Sw { background-color: #e8e4da; }
+
 .head {
   position: absolute;
   left: 0px;
@@ -301,10 +395,9 @@ function touchPoint(e) {
   padding-right: 8px;
 }
 .backbtn { width: 96px; height: 32px; justify-content: center; }
-.backtext { color: #8ca0ad; font-size: 14px; }
+.backtext { font-size: 14px; }
 .title {
   flex: 1;
-  color: #8ca0ad;
   font-size: 13px;
   text-align: center;
   lines: 1;
@@ -323,7 +416,7 @@ function touchPoint(e) {
   height: 190px;
 }
 .pagescroller { width: 760px; height: 190px; }
-.pagetext { color: #d7e2e8; text-align: left; }
+.pagetext { text-align: left; }
 .fs18 { font-size: 18px; line-height: 28px; }
 .fs20 { font-size: 20px; line-height: 30px; }
 .fs22 { font-size: 22px; line-height: 32px; }
@@ -339,7 +432,7 @@ function touchPoint(e) {
   flex-direction: row;
   align-items: center;
 }
-.foottext { color: #5c7182; font-size: 11px; }
+.foottext { font-size: 11px; }
 .footbar {
   flex: 1;
   height: 3px;
@@ -393,60 +486,42 @@ function touchPoint(e) {
   top: 0px;
   width: 800px;
   height: 254px;
-  background-color: rgba(5, 8, 12, 0.82);
+  background-color: rgba(5, 8, 12, 0.6);
   z-index: 10;
 }
-.menu {
+.side {
   position: absolute;
-  left: 14px;
-  top: 12px;
-  width: 772px;
-  height: 230px;
+  left: 0px;
+  top: 0px;
+  width: 300px;
+  height: 254px;
   background-color: #121922;
-  border-radius: 12px;
-  border-width: 1px;
+  border-right-width: 1px;
   border-color: #263340;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding-top: 8px;
+  padding-bottom: 6px;
   padding-left: 14px;
   padding-right: 14px;
+  z-index: 11;
 }
-.mrow { flex-direction: row; align-items: center; }
-.mtitle { color: #e8eef2; font-size: 15px; font-weight: bold; width: 90px; }
-.mbook {
-  flex: 1;
-  color: #5c7182;
-  font-size: 11px;
-  lines: 1;
-  text-overflow: ellipsis;
-}
-.mbtn {
-  min-width: 66px;
-  height: 30px;
-  border-radius: 8px;
-  background-color: #19242f;
-  border-width: 1px;
-  border-color: #263340;
+.srow { flex-direction: row; align-items: center; margin-top: 6px; }
+.sh { margin-top: 0px; justify-content: space-between; }
+.stitle { color: #e8eef2; font-size: 14px; font-weight: bold; }
+.sclose {
+  min-width: 52px;
+  height: 24px;
+  border-radius: 7px;
+  background-color: #123a37;
   align-items: center;
   justify-content: center;
-  margin-left: 8px;
-  padding-left: 8px;
-  padding-right: 8px;
 }
-.mbtntext { color: #8ca0ad; font-size: 12px; }
-.mbtnTextSolid { color: #4fd6c3; font-size: 12px; }
-
-.mrow2 {
-  flex-direction: row;
-  align-items: center;
-  margin-top: 10px;
-}
-.mlabel { color: #8ca0ad; font-size: 12px; }
-.mlabel2 { color: #8ca0ad; font-size: 12px; margin-left: 26px; }
-.seg {
-  width: 40px;
-  height: 30px;
-  border-radius: 8px;
+.sclosetext { color: #4fd6c3; font-size: 12px; }
+.slabel { color: #8ca0ad; font-size: 12px; width: 34px; }
+.slabel2 { color: #8ca0ad; font-size: 12px; margin-left: 18px; }
+.sseg {
+  width: 34px;
+  height: 26px;
+  border-radius: 7px;
   background-color: #19242f;
   border-width: 1px;
   border-color: #263340;
@@ -454,54 +529,88 @@ function touchPoint(e) {
   justify-content: center;
   margin-left: 8px;
 }
-.segtext { color: #e8eef2; font-size: 15px; }
-.fontbox {
-  width: 44px;
-  height: 30px;
-  align-items: center;
-  justify-content: center;
-}
-.fontval { color: #4fd6c3; font-size: 15px; }
-.segpair {
+.ssegtext { color: #e8eef2; font-size: 13px; }
+.sfontbox { width: 38px; height: 26px; align-items: center; justify-content: center; }
+.sfontval { color: #4fd6c3; font-size: 13px; }
+.spair {
   flex-direction: row;
   margin-left: 8px;
-  border-radius: 8px;
+  border-radius: 7px;
   border-width: 1px;
   border-color: #263340;
   overflow: hidden;
 }
-.segopt { width: 54px; height: 30px; align-items: center; justify-content: center; }
-.segon { background-color: #123a37; }
-.segoff { background-color: #19242f; }
-.segopttext { font-size: 12px; }
-.segontext { color: #4fd6c3; }
-.segofftext { color: #8ca0ad; }
+.sopt { width: 44px; height: 26px; align-items: center; justify-content: center; }
+.opton { background-color: #123a37; }
+.optoff { background-color: #19242f; }
+.sopttext { font-size: 11px; }
+.optontext { color: #4fd6c3; }
+.optofftext { color: #8ca0ad; }
 
-.mrow3 { margin-top: 10px; }
-.markline { height: 34px; justify-content: center; }
-.marklinetext { color: #8ca0ad; font-size: 13px; }
-.marklist { width: 744px; height: 120px; }
-.mrow0 { padding: 8px; }
-.markempty { color: #5c7182; font-size: 12px; }
-.markrow { flex-direction: row; align-items: center; height: 34px; }
+.themesw { width: 238px; height: 46px; }
+.chipbox { width: 39px; align-items: center; }
+.chip {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  align-items: center;
+  justify-content: center;
+}
+.chipOn { background-color: #4fd6c3; border-width: 2px; border-color: #4fd6c3; }
+.chipOff { border-width: 1px; border-color: #263340; }
+.chiptext { color: #0b0f14; font-size: 13px; font-weight: bold; }
+.chiplabel { color: #8ca0ad; font-size: 9px; margin-top: 2px; }
+
+.sjump {
+  width: 62px;
+  height: 26px;
+  border-radius: 7px;
+  background-color: #19242f;
+  border-width: 1px;
+  border-color: #263340;
+  align-items: center;
+  justify-content: center;
+}
+.sjumptext { color: #8ca0ad; font-size: 11px; }
+.spageinfo { flex: 1; color: #4fd6c3; font-size: 11px; text-align: center; }
+
+.smarks { margin-top: 6px; }
+.smarksh { height: 18px; }
+.marklist { width: 272px; height: 60px; }
+.mrow0 { padding: 4px; }
+.markempty { color: #5c7182; font-size: 11px; }
+.markrow { flex-direction: row; align-items: center; height: 28px; }
 .markmain { flex: 1; flex-direction: row; align-items: center; }
-.markpage { color: #f5b85c; font-size: 12px; width: 64px; }
+.markpage { color: #f5b85c; font-size: 11px; width: 40px; }
 .markpreview {
   flex: 1;
   color: #8ca0ad;
-  font-size: 12px;
+  font-size: 11px;
   lines: 1;
   text-overflow: ellipsis;
-  margin-right: 10px;
+  margin-right: 8px;
 }
 .markdel {
-  width: 40px;
-  height: 26px;
-  border-radius: 7px;
+  width: 34px;
+  height: 22px;
+  border-radius: 6px;
   background-color: #19242f;
   align-items: center;
   justify-content: center;
 }
-.markdeltext { color: #ff6b72; font-size: 11px; }
-.msep { position: absolute; left: 0px; bottom: 0px; width: 744px; height: 1px; background-color: #1b2530; }
+.markdeltext { color: #ff6b72; font-size: 10px; }
+.msep { position: absolute; left: 0px; bottom: 0px; width: 272px; height: 1px; background-color: #1b2530; }
+
+.sfoot { margin-top: 5px; flex-direction: row; }
+.sback {
+  width: 272px;
+  height: 26px;
+  border-radius: 8px;
+  background-color: #19242f;
+  border-width: 1px;
+  border-color: #263340;
+  align-items: center;
+  justify-content: center;
+}
+.sbacktext { color: #8ca0ad; font-size: 12px; }
 </style>
