@@ -113,11 +113,14 @@ echo "== 输出: $OUT ($(du -h "$OUT" | cut -f1)) =="
 # ---------- ELF 校验 ----------
 fail=0
 MACHINE=$("$READELF" -h "$OUT" | awk '/Machine:/{print $NF}')
-case "$MACHINE" in
-  ARM) if [ "${ABI#aarch64}" != "$ABI" ]; then echo "校验失败: 期望 AARCH64 得到 ARM"; fail=1; fi ;;
-  AArch64) if [ "${ABI#aarch64}" = "$ABI" ]; then echo "校验失败: 期望 ARM 得到 AArch64"; fail=1; fi ;;
-  *) echo "校验失败: 未知机器类型 '$MACHINE'"; fail=1 ;;
+case "$TRIPLE" in
+  *aarch64*) EXPECTED=AArch64 ;;
+  *) EXPECTED=ARM ;;
 esac
+if [ "$MACHINE" != "$EXPECTED" ]; then
+  echo "校验失败: 期望 $EXPECTED 得到 $MACHINE"
+  fail=1
+fi
 if ! "$NM" -D "$OUT" 2>/dev/null | grep -q custom_init_jsapis; then
   echo "校验失败: 未导出 custom_init_jsapis"; fail=1
 fi
