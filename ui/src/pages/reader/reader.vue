@@ -284,44 +284,27 @@ export default {
       lib.saveSettings({ fontSize: size })
       this.repaginate(keep)
     },
-    diag(tag, e) {
-      // TEMP-DIAG: 交互诊断，确认后移除
-      if (!this._diagN) this._diagN = 0
-      if (this._diagN >= 8) return
-      this._diagN++
-      let info = ''
-      try {
-        const arr = (e && e.changedTouches && e.changedTouches.length) ? e.changedTouches : (e && e.touches)
-        info = 'keys=' + (e ? Object.keys(e).join('|') : 'null') + ' touch=' + (arr ? JSON.stringify(arr[0]).slice(0, 160) : '-')
-      } catch (err) { info = 'sererr' }
-      console.error('[evt] ' + tag + ' ' + info)
-    },
     // 三个点击分区：左=上一页，右=下一页，中=侧边栏（click 驱动，两种阅读方式都可用）
     onZoneLeft(e) {
       this.stop(e)
-      this.diag('zoneL', e)
       if (this._suppressClick) return
       this.prevPage()
     },
     onZoneRight(e) {
       this.stop(e)
-      this.diag('zoneR', e)
       if (this._suppressClick) return
       this.nextPage()
     },
     onZoneCenter(e) {
       this.stop(e)
-      this.diag('zoneM', e)
       if (this._suppressClick) return
       this.sidebarOpen = true
     },
     onTouchStart(e) {
-      this.diag('tstart', e)
       const p = touchPoint(e)
       this._touch = p ? { x: p.x, y: p.y, t: Date.now() } : null
     },
     onTouchEnd(e) {
-      this.diag('tend', e)
       const start = this._touch
       this._touch = null
       if (!start || this.sidebarOpen) return
