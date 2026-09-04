@@ -63,8 +63,15 @@ for dev in "${DEVICES[@]}"; do
     echo "解压到 $tc_dir"
     tar -xjf "$tarball" -C "$tc_dir"
   fi
-  cxx="$(find "$tc_dir" -name '*-g++' -type f 2>/dev/null | head -n 1)"
-  [ -n "$cxx" ] || { echo "错误: 工具链里没有 *-g++ ($dev)"; exit 1; }
+  # buildroot 工具链里的 g++ 通常是符号链接，不能用 -type f
+  cxx="$(find -L "$tc_dir" -name '*-g++' 2>/dev/null | head -n 1)"
+  [ -n "$cxx" ] || cxx="$(find -L "$tc_dir" -name '*-c++' 2>/dev/null | head -n 1)"
+  if [ -z "$cxx" ]; then
+    echo "错误: 工具链里没有 *-g++ ($dev)，目录结构:"
+    find "$tc_dir" -maxdepth 3 -type d | head -8
+    find -L "$tc_dir" \( -name '*g++*' -o -name '*gcc*' \) 2>/dev/null | head -8
+    exit 1
+  fi
   prefix="$(dirname "$cxx")/$(basename "$cxx" | sed 's/g++$//')"
   echo "工具链前缀: $prefix"
 
