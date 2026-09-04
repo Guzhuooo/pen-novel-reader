@@ -1,0 +1,77 @@
+# 书阁 · 有道词典笔小说阅读器
+
+一款运行在有道词典笔（Falcon / HaaS UI mini-app 运行时）上的**暗色小说阅读器**。
+纯离线：直接读取笔内存储的 txt 小说，支持书架、全盘扫描、书签、进度记忆与两种翻页方式。
+
+![appid](https://img.shields.io/badge/appid-8001876543210987-4fd6c3)
+![runtime](https://img.shields.io/badge/runtime-Falcon%20%2F%20Vue2.6-121922)
+
+## 功能
+
+- **书架**：保存到笔里的小说集中管理，顶部「继续阅读」一键回到上次位置
+- **找小说**：浏览 `/userdisk` 目录，或「扫描全盘」一键找出所有 txt 文本
+- **阅读器**：暗色护眼版式，字号 18–26 可调，点击屏幕呼出设置
+- **翻页方式**：`按键`（屏幕两侧翻页键）或 `滑动`（左右滑翻页、点按呼出菜单），随时切换
+- **书签**：任意页一键加书签，书签列表跳转/删除
+- **进度记忆**：按字符偏移保存，改字号也不会丢位置；退出即存，重进即恢复
+
+## 真机适配记录（profile 摘要）
+
+| 项目 | 值 |
+|---|---|
+| 设备 | 有道词典笔（CoCo-1826，Cvitek cv182x，ARMv7 glibc Buildroot） |
+| 逻辑屏幕 | 800×254 横屏（fb 原生 254×800，`direction: 270`） |
+| 文件读取 | 原生模块 `custom.scan`：`listDir / readText / fileInfo / exists / mkdirs / removeFile / rmdir` |
+| 存储 | `$falcon.jsapi.storage`：`setStorage({key,data})` / `getStorage({key}) -> {data}` |
+| 启动 | `miniapp_cli install <amr>` 后 `miniapp_cli start <appid>`（**不带 `--page`**，本固件该写法解析不了页面名） |
+| 入口 | 运行时要求 qjsc 编译产物（`aiot-cli -c -q -p`），每个页面独立 chunk |
+
+详细画像与验证证据见 [profiles/youdao-dictpen-coco1826.md](profiles/youdao-dictpen-coco1826.md)。
+
+## 已知限制
+
+- **编码**：设备端 `readText` 按 UTF-8 转码，GBK 文件的字节会被替换为 `U+FFFD`（有损）。
+  本应用会检测到并提示；请把 GBK 小说先转成 UTF-8 再放进笔里。
+- **横竖屏**：固件不支持应用内旋转屏幕（运行时 `cfg.json` 固定 `direction: 270`），
+  CSS transform 旋转容器内的文字不渲染（真机实测），故本应用为横屏版式。
+- **触屏注入**：无法通过 adb 注入触摸事件做自动化，交互请在真机上验证。
+
+## 本地构建
+
+环境：Node.js 18+、pnpm 10.12.4
+
+```bash
+pnpm install
+pnpm test          # 纯逻辑单元测试（分页器/文本处理）
+pnpm build         # 生成 ui/8001876543210987.1_0_0.amr
+```
+
+安装到笔：
+
+```bash
+adb push ui/8001876543210987.1_0_0.amr /tmp/app.amr
+adb shell miniapp_cli install /tmp/app.amr
+adb shell miniapp_cli start 8001876543210987
+```
+
+## GitHub Actions
+
+推送即自动构建，AMR 在 Actions Artifacts 里下载：[.github/workflows/build.yml](.github/workflows/build.yml)。
+
+## 目录结构
+
+```text
+aiot-vue-cli/   # Falcon 构建器（vendored，MIT）
+ui/             # 主应用（书阁）
+  libs/         # 原生 jsapi（libjsapi_langningchen.so，提供 custom.scan 文件能力）
+  src/
+    pages/      # index 书架 / files 找小说 / reader 阅读器
+    utils/      # pen-fs、kvstore、library、paginator、coords、text（纯逻辑可单测）
+probe/          # jsapi 探针小应用（开发期真机 API 验证工具）
+tools/          # 触摸注入等调试脚本
+test/           # node --test 单元测试
+```
+
+## 许可
+
+GPL-3.0-or-later。构建器 `aiot-vue-cli` 为 MIT 许可，保持其原始声明。

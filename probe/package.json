@@ -1,0 +1,25 @@
+{
+  "name": "probe",
+  "appid": "8001999900000001",
+  "version": "0.0.1",
+  "description": "jsapi 探针",
+  "icon": "app_icon.png",
+  "quickjs": {
+    "version": "20200705",
+    "bigNum": false
+  },
+  "single-js-bundle": false,
+  "scripts": {
+    "build": "aiot-cli -p",
+    "package": "aiot-cli -c -q -p"
+  },
+  "dependencies": {
+    "falcon-ui": "^2.0.2"
+  },
+  "devDependencies": {
+    "@vue/compiler-sfc": "^3.5.27",
+    "aiot-vue-cli": "link:../aiot-vue-cli",
+    "vue": "^3.5.27"
+  },
+  "packageManager": "pnpm@10.12.4"
+}

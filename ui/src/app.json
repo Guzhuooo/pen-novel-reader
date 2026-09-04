@@ -1,0 +1,8 @@
+{
+  "pages": {
+    "index": "pages/index/index.vue",
+    "files": "pages/files/files.vue",
+    "reader": "pages/reader/reader.vue"
+  },
+  "options": { "style": { "lessPaths": ["styles"] } }
+}

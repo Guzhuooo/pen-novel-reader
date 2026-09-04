@@ -1,0 +1,43 @@
+name: build-amr
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Ensure qjsc binaries are executable
+        run: chmod +x aiot-vue-cli/cli-libs/aiot-qjsc-tool/assets/bin/linux/*
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Build AMR
+        run: pnpm -C ui package
+
+      - name: Upload AMR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pen-novel-reader-amr
+          path: ui/*.amr
+          if-no-files-found: error

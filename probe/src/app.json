@@ -1,0 +1,7 @@
+{
+  "pages": {
+    "index": "pages/index/index.vue",
+    "files": "pages/files/files.vue"
+  },
+  "options": { "style": { "lessPaths": ["styles"] } }
+}

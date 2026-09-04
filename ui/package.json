@@ -1,0 +1,35 @@
+{
+  "name": "pen-novel-reader",
+  "appName": "书阁",
+  "appid": "8001876543210987",
+  "version": "1.0.0",
+  "description": "有道词典笔暗色小说阅读器：书架、书签、进度记忆、横竖排阅读",
+  "icon": "app_icon.png",
+  "quickjs": {
+    "version": "20200705",
+    "bigNum": false
+  },
+  "single-js-bundle": false,
+  "scripts": {
+    "build": "aiot-cli -p",
+    "package": "aiot-cli -c -q -p"
+  },
+  "keywords": [
+    "youdao",
+    "dictpen",
+    "falcon",
+    "novel",
+    "reader"
+  ],
+  "dependencies": {
+    "falcon-ui": "^2.0.2"
+  },
+  "devDependencies": {
+    "@vue/compiler-sfc": "^3.5.27",
+    "aiot-vue-cli": "link:../aiot-vue-cli",
+    "vue": "^3.5.27"
+  },
+  "packageManager": "pnpm@10.12.4",
+  "license": "GPL-3.0-or-later",
+  "type": "module"
+}

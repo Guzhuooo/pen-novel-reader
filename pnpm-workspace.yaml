@@ -1,0 +1,4 @@
+packages:
+  - aiot-vue-cli
+  - ui
+  - probe

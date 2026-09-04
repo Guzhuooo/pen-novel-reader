@@ -1,0 +1,13 @@
+import { BasePage } from './base-page.js'
+
+class App extends $falcon.App {
+  onLaunch(options) {
+    super.onLaunch(options)
+    console.log('[probe] launch env=' + JSON.stringify($falcon.env || {}))
+    $falcon.useDefaultBasePageClass(BasePage)
+  }
+  onShow() { super.onShow() }
+  onHide() { super.onHide() }
+  onDestroy() { super.onDestroy() }
+}
+export default App
