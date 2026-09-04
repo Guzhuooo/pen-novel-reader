@@ -38,8 +38,17 @@
 - **分页版式**：启动时从设备运行时配置 `/etc/miniapp/resources/cfg.json` 读取逻辑分辨率
   （90/270 度自动换向），按比例推导每页行数与字数；读不到时回退 800×254。
   即同一个 AMR 可以在不同分辨率的词典笔上正常分页排版。
-- **运行环境要求**：Falcon/QuickJS 运行时 + ARMv7 glibc（包内 `custom.scan` 原生模块为该 ABI；
-  其他 ABI 的笔会因原生模块加载失败而无法读文件）。
+- **多机型原生模块**：`pnpm` 打包的 JS 字节码与架构无关，只有 `libs/*.so` 与 ABI 相关。
+  `tools/build-all-releases.sh`（配合 `.github/workflows/release.yml`，工具链与 miniapp-creater.sh 同源）
+  为每种笔编译对应的 `libjsapi_shuge.so`（fs 模块）并打包成机型专属 AMR：
+
+  | 机型 | ABI | 原生模块 |
+  |---|---|---|
+  | X5 / S6 Pro | armv7 glibc | custom.scan + shuge fs |
+  | A6 Pro | armv7 uclibc | shuge fs |
+  | P5 / X7 | aarch64 glibc | shuge fs |
+
+  应用运行时自动选择可用的文件接口（custom.scan 优先，fs 模块兜底）。
 
 ## 已知限制
 

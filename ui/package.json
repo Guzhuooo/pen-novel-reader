@@ -2,7 +2,7 @@
   "name": "pen-novel-reader",
   "appName": "书阁",
   "appid": "8001876543210987",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "有道词典笔暗色小说阅读器：书架、书签、进度记忆、横竖排阅读",
   "icon": "app_icon.png",
   "quickjs": {

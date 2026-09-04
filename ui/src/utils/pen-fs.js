@@ -1,8 +1,28 @@
-// 设备文件系统适配层。
-// 本固件的文件能力来自原生模块 custom（libjsapi_langningchen.so）：
-//   custom.scan.{listDir, readText, exists, fileInfo, mkdirs, removeFile, rmdir, dataDir}
-// 已在真机探针验证：readText 对 UTF-8 文本正确转码；GBK 字节会被替换为 U+FFFD（有损）。
+// 设备文件系统适配层（跨机型）。
+// 优先级：
+//   1) 原生模块 custom（libjsapi_langningchen.so，armv7-glibc 笔）：custom.scan.*，
+//      readText 由原生做 UTF-8 转码（探针验证）；GBK 字节会变 U+FFFD（有损）。
+//   2) 原生模块 fs（libjsapi_shuge.so，各 ABI 均可由 tools/build-all-releases.sh 编译）：
+//      fs.{listDir... 无 -> readdir/stat/readFile/exists}，readFile 按 UTF-8 解释。
+//   3) jsapi.scan（部分固件内置）。
+// 模块缺失时动态 import 的异常会被捕获，不影响应用启动。
 import custom from 'custom'
+
+let fsModuleState = undefined // undefined=未探测, false=不可用, 否则为模块对象
+
+async function fsApi() {
+  if (fsModuleState !== undefined) return fsModuleState || null
+  try {
+    const m = await import('fs')
+    const mod = m && (m.default || m)
+    if (mod && typeof mod.readFile === 'function') {
+      fsModuleState = mod
+      return mod
+    }
+  } catch (e) { /* 模块不存在 */ }
+  fsModuleState = false
+  return null
+}
 
 function scanApi() {
   try {
