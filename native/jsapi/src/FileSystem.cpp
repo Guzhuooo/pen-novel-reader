@@ -341,7 +341,7 @@ JSValue fsReadFileBytes(JSContext* ctx, JSValueConst, int argc, JSValueConst* ar
     fclose(file);
 
     if (data.empty()) return resolved(ctx, JS_NewArrayBuffer(ctx, NULL, 0, NULL, NULL, 0));
-    return resolved(ctx, JS_NewArrayBufferCopy(ctx, data.data(), data.size()));
+    return resolved(ctx, JS_NewArrayBufferCopy(ctx, reinterpret_cast<const uint8_t*>(data.data()), data.size()));
 }
 
 JSValue fsWriteFile(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv)
