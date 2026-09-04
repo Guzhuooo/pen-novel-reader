@@ -32,6 +32,9 @@ jobs:
       - name: Run unit tests
         run: pnpm test
 
+      - name: Ensure qjsc binaries are executable
+        run: chmod +x aiot-vue-cli/cli-libs/aiot-qjsc-tool/assets/bin/linux/*
+
       - name: Build AMR for every device
         run: |
           chmod +x tools/build-native.sh tools/build-all-releases.sh
