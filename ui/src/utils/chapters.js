@@ -10,6 +10,7 @@ const RE_BRACKET = new RegExp('^\\s*[【\\[（(]\\s*第?\\s*' + NUM + '\\s*[章�
 const RE_EN = /^\s*(?:chapter|Chapter|CHAPTER)\s*[0-9]{1,4}\b/
 // 特殊章节名：后面必须是行尾或分隔符，避免「引子内容」这类正文被误判；
 // 允许「番外2」「序章 一」这类带编号写法。
+const RE_VOLUME = new RegExp('^\\s*卷\\s*' + NUM + '\\s*[:：、.．\\-—\\s]')
 const RE_SPECIAL = new RegExp(
   '^\\s*(?:序章|序言|楔子|前言|引子|尾声|后记|终章|番外[0-9零一二三四五六七八九十]{0,3})' +
   '(?:\\s|$|[:：、.．\\-—])'
@@ -17,7 +18,7 @@ const RE_SPECIAL = new RegExp(
 const MAX_HEAD_LEN = 40
 // 行首字符预筛，避免对每一行跑正则
 const PREFILTER = {}
-for (const ch of ['第', '【', '[', '（', '(', '序', '楔', '前', '引', '尾', '后', '终', '番', 'c', 'C']) {
+for (const ch of ['第', '【', '[', '（', '(', '序', '楔', '前', '引', '尾', '后', '终', '番', '卷', 'c', 'C']) {
   PREFILTER[ch] = true
 }
 
@@ -30,6 +31,7 @@ export function isChapterLine(line) {
   if (RE_SPECIAL.test(bare)) return true
   if (RE_CHAPTER.test(bare)) return true
   if (RE_BRACKET.test(bare)) return true
+  if (RE_VOLUME.test(bare)) return true
   return false
 }
 

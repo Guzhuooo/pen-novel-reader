@@ -68,8 +68,8 @@
           <div class="chnav press" @click="nextChapter($event)"><text class="chnavtext">下章</text></div>
         </div>
         <div class="slist">
-          <text class="listhint" v-if="sidebarTab === 'chapter' && chScanPct < 100">正在解析章节 {{ chScanPct }}%</text>
-          <text class="listhint" v-if="sidebarTab === 'chapter' && chScanPct === 100 && chapters.length === 0">未识别到章节标题（支持「第一章 / 第1回 / Chapter N / 楔子」等格式）</text>
+          <text class="listhint" v-if="sidebarTab === 'chapter' && !chScanDone">正在解析章节 {{ chScanPct }}%</text>
+          <text class="listhint" v-if="sidebarTab === 'chapter' && chScanDone && chapters.length === 0">未识别到章节标题（支持「第一章 / 第1回 / Chapter N / 楔子」等格式）</text>
           <text class="listhint" v-if="sidebarTab === 'mark' && marks.length === 0">点右上角 ☆ 收藏当前页</text>
           <scroller class="chapterlist" show-scrollbar="false" v-if="sidebarTab === 'chapter' && chapters.length">
             <div v-for="(c, i) in chapters" :key="c.offset" class="chrow" :class="i === curChapter ? 'chrowOn' : 'chrowOff'" @click="gotoChapter(i, $event)">
@@ -121,7 +121,8 @@ export default {
       offsets: [0, 0],
       marks: [],
       chapters: [],
-      chScanPct: 100,
+      chScanPct: 0,
+      chScanDone: false,
       sidebarTab: 'chapter',
       sidebarOpen: false,
       pagingPct: 100,
@@ -183,7 +184,7 @@ export default {
     },
     async saveLayoutCache() {
       if (!this.ready || !this._text) return
-      if (this.pagingPct < 100 || this.chScanPct < 100) return
+      if (this.pagingPct < 100 || !this.chScanDone) return
       if (this.offsets.length > 60000) return
       try {
         await lib.saveLayoutCache(this._id, {
@@ -203,6 +204,7 @@ export default {
           this.offsets = c.offsets
           this.chapters = Array.isArray(c.chapters) ? c.chapters : []
           this.chScanPct = 100
+          this.chScanDone = true
           this.pagingPct = 100
           return true
         }
@@ -236,7 +238,6 @@ export default {
         this.page = Math.min(pageOfOffset(pg.offsets, keep), pageCount(pg.offsets) - 1)
         this.updatePct()
         this.queueSave()
-        this.startChapterScan()
       }
       tick()
     },
@@ -277,6 +278,7 @@ export default {
           this.updatePct()
         } else {
           this.repaginate(keep)
+          this.startChapterScan()
         }
         this.ready = true
       } catch (e) {
@@ -285,14 +287,13 @@ export default {
       }
     },
     startChapterScan() {
-      if (this._chScanner) return
-      if (this.chapters.length || this.chScanPct === 100) return
+      if (this._chScanner || this.chScanDone) return
       this._chScanner = new ChapterScanner(this._text || '')
       this.chScanPct = 0
       const tick = () => {
         const sc = this._chScanner
         if (!sc) return
-        sc.step(400000)
+        sc.step(200000)
         this.chScanPct = sc.progress()
         if (!sc.done) {
           this._chTimer = setTimeout(tick, 0)
@@ -300,6 +301,7 @@ export default {
         }
         this.chapters = sc.chapters
         this.chScanPct = 100
+        this.chScanDone = true
         this.saveLayoutCache()
       }
       tick()
@@ -338,7 +340,7 @@ export default {
       this.stop(e)
       const i = this.curChapter
       if (i >= 0 && i < this.chapters.length - 1) this.gotoChapter(i + 1, e)
-      else if (this.chScanPct < 100) this.toast('章节解析中')
+      else if (!this.chScanDone) this.toast('章节解析中')
       else if (i >= 0) this.toast('已经是最后一章')
       else this.toast('未识别到章节')
     },
@@ -411,8 +413,6 @@ export default {
       this.fontSize = size
       lib.saveSettings({ fontSize: size })
       this._sig = this.layoutSig(getScreen())
-      this._chScanner = null
-      this.chScanPct = 100
       this.repaginate(keep)
     },
     // 三个点击分区：左=上一页，右=下一页，中=侧边栏（click 驱动，两种阅读方式都可用）

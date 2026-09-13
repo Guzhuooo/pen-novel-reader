@@ -44,7 +44,8 @@ import appToast from '../../components/app-toast.vue'
 
 const ROOT = '/userdisk'
 // 扫描范围覆盖整个 /userdisk，只跳过这几个系统/异常目录（其余一律扫）
-const SKIP_DIRS = ['miniapp', 'lost+found', 'corefile', 'swap']
+const SKIP_DIRS = ['miniapp', 'lost+found', 'corefile', 'swap', 'opt']
+const MIN_TXT_SIZE = 8 * 1024 // 扫描结果只收 8KB 以上文本（浏览和手动打开不受限）
 const MAX_DEPTH = 8
 const MAX_FOUND = 500
 
@@ -116,6 +117,7 @@ export default {
           } else if (/\.txt$/i.test(it.name)) {
             let size = 0
             try { const info = await fs.fileInfo(p); size = info.size } catch (e) { /* 忽略 */ }
+            if (size > 0 && size < MIN_TXT_SIZE) continue
             out.push({
               key: p,
               name: it.name,
