@@ -12,7 +12,7 @@
       </scroller>
     </div>
     <div class="foot">
-      <text :class="['foottext', 'th' + theme + 'Mut']">{{ pageTextShort }}</text>
+      <text :class="['foottext', 'th' + theme + 'Mut']">{{ footLeft }}</text>
       <div class="footbar"><text class="footfill" :class="'ff' + pctStep"> </text></div>
       <text :class="['foottext', 'th' + theme + 'Mut']">{{ pct }}%</text>
     </div>
@@ -33,7 +33,8 @@
       <div class="side" @click="noop($event)">
         <div class="srow sh">
           <text class="stitle">阅读设置</text>
-          <div class="sclose press" @click="closeSidebar($event)"><text class="sclosetext">完成</text></div>
+          <div class="sclose press" @click="goBack($event)"><text class="sclosetext">书架</text></div>
+          <div class="sclose2 press" @click="closeSidebar($event)"><text class="sclosetext">完成</text></div>
         </div>
         <div class="srow">
           <text class="slabel">字号</text>
@@ -60,10 +61,23 @@
           <text class="spageinfo">{{ pageTextShort }}</text>
           <div class="sjump press" @click="jump(10, $event)"><text class="sjumptext">+10页</text></div>
         </div>
-        <div class="smarks">
-          <div class="smarksh"><text class="slabel">书签 {{ marks.length }}</text></div>
-          <scroller class="marklist" show-scrollbar="false">
-            <div class="mrow0" v-if="marks.length === 0"><text class="markempty">点右上角 ☆ 收藏当前页</text></div>
+        <div class="srow">
+          <div class="stab press" :class="sidebarTab === 'chapter' ? 'tabon' : 'taboff'" @click="setTab('chapter', $event)"><text class="stabtext" :class="sidebarTab === 'chapter' ? 'tabontext' : 'tabofftext'">章节{{ chapters.length ? ' ' + chapters.length : '' }}</text></div>
+          <div class="stab press" :class="sidebarTab === 'mark' ? 'tabon' : 'taboff'" @click="setTab('mark', $event)"><text class="stabtext" :class="sidebarTab === 'mark' ? 'tabontext' : 'tabofftext'">书签{{ marks.length ? ' ' + marks.length : '' }}</text></div>
+          <div class="chnav press" @click="prevChapter($event)"><text class="chnavtext">上章</text></div>
+          <div class="chnav press" @click="nextChapter($event)"><text class="chnavtext">下章</text></div>
+        </div>
+        <div class="slist">
+          <text class="listhint" v-if="sidebarTab === 'chapter' && chScanPct < 100">正在解析章节 {{ chScanPct }}%</text>
+          <text class="listhint" v-if="sidebarTab === 'chapter' && chScanPct === 100 && chapters.length === 0">未识别到章节标题（支持「第一章 / 第1回 / Chapter N / 楔子」等格式）</text>
+          <text class="listhint" v-if="sidebarTab === 'mark' && marks.length === 0">点右上角 ☆ 收藏当前页</text>
+          <scroller class="chapterlist" show-scrollbar="false" v-if="sidebarTab === 'chapter' && chapters.length">
+            <div v-for="(c, i) in chapters" :key="c.offset" class="chrow" :class="i === curChapter ? 'chrowOn' : 'chrowOff'" @click="gotoChapter(i, $event)">
+              <text class="chtext" :class="i === curChapter ? 'chtextOn' : 'chtextOff'">{{ c.title }}</text>
+              <text class="chpct" :class="i === curChapter ? 'chtextOn' : 'chtextOff'">{{ chapterPct(c) }}</text>
+            </div>
+          </scroller>
+          <scroller class="chapterlist" show-scrollbar="false" v-if="sidebarTab === 'mark' && marks.length">
             <div v-for="(m, i) in marks" :key="m.offset" class="markrow">
               <div class="markmain press" @click="gotoMark(m, $event)">
                 <text class="markpage">P{{ markPage(m) + 1 }}</text>
@@ -73,9 +87,6 @@
               <div class="msep" v-if="i < marks.length - 1"></div>
             </div>
           </scroller>
-        </div>
-        <div class="sfoot">
-          <div class="sback press" @click="goBack($event)"><text class="sbacktext">返回书架</text></div>
         </div>
       </div>
     </div>
@@ -89,9 +100,10 @@ import fs from '../../utils/pen-fs.js'
 import * as lib from '../../utils/library.js'
 import { normalizeRawText, encodingWarning } from '../../utils/text.js'
 import { IncrementalPaginator, pageOfOffset, pageCount, previewOf } from '../../utils/paginator.js'
-import { landscapeLayout, setScreen } from '../../utils/coords.js'
+import { landscapeLayout, setScreen, getScreen } from '../../utils/coords.js'
 import { detectScreen } from '../../utils/device.js'
 import { THEMES, clampTheme } from '../../utils/themes.js'
+import { ChapterScanner, chapterIndexOf } from '../../utils/chapters.js'
 import appToast from '../../components/app-toast.vue'
 
 const FONT_SIZES = [18, 20, 22, 24, 26]
@@ -108,6 +120,9 @@ export default {
       page: 0,
       offsets: [0, 0],
       marks: [],
+      chapters: [],
+      chScanPct: 100,
+      sidebarTab: 'chapter',
       sidebarOpen: false,
       pagingPct: 100,
       ready: false,
@@ -127,6 +142,18 @@ export default {
     },
     pageTextShort() {
       return '第 ' + (this.page + 1) + ' / ' + pageCount(this.offsets) + ' 页'
+    },
+    curChapter() {
+      const off = this.offsets[this.page] || 0
+      return chapterIndexOf(this.chapters, off)
+    },
+    curChapterTitle() {
+      const i = this.curChapter
+      return i < 0 ? '' : (this.chapters[i] ? this.chapters[i].title : '')
+    },
+    footLeft() {
+      const t = this.curChapterTitle
+      return t ? t + ' · ' + this.pageTextShort : this.pageTextShort
     },
     pageMarked() {
       const t = this._text || ''
@@ -150,6 +177,37 @@ export default {
     },
     layout() {
       return landscapeLayout(this.fontSize)
+    },
+    layoutSig(scr) {
+      return 'v1-fs' + this.fontSize + '-' + scr.w + 'x' + scr.h
+    },
+    async saveLayoutCache() {
+      if (!this.ready || !this._text) return
+      if (this.pagingPct < 100 || this.chScanPct < 100) return
+      if (this.offsets.length > 60000) return
+      try {
+        await lib.saveLayoutCache(this._id, {
+          sig: this._sig,
+          len: this._text.length,
+          offsets: this.offsets,
+          chapters: this.chapters,
+        })
+      } catch (e) { /* 缓存失败不影响阅读 */ }
+    },
+    async tryLoadLayoutCache(id, text, scr) {
+      const sig = this.layoutSig(scr)
+      try {
+        const c = await lib.getLayoutCache(id)
+        if (c && c.sig === sig && c.len === text.length && Array.isArray(c.offsets) && c.offsets.length > 1 &&
+            c.offsets[c.offsets.length - 1] === text.length) {
+          this.offsets = c.offsets
+          this.chapters = Array.isArray(c.chapters) ? c.chapters : []
+          this.chScanPct = 100
+          this.pagingPct = 100
+          return true
+        }
+      } catch (e) { /* 视为无缓存 */ }
+      return false
     },
     repaginate(keepOffset) {
       const lay = this.layout()
@@ -178,6 +236,7 @@ export default {
         this.page = Math.min(pageOfOffset(pg.offsets, keep), pageCount(pg.offsets) - 1)
         this.updatePct()
         this.queueSave()
+        this.startChapterScan()
       }
       tick()
     },
@@ -209,13 +268,79 @@ export default {
         this.marks = await lib.getMarks(id)
         const scr = await detectScreen()
         setScreen(scr.w, scr.h)
+        this._sig = this.layoutSig(scr)
         const prog = await lib.getProgress(id)
-        this.repaginate(prog ? prog.offset : 0)
+        const keep = prog ? prog.offset : 0
+        const cached = await this.tryLoadLayoutCache(id, text, scr)
+        if (cached) {
+          this.page = Math.min(pageOfOffset(this.offsets, keep), pageCount(this.offsets) - 1)
+          this.updatePct()
+        } else {
+          this.repaginate(keep)
+        }
         this.ready = true
       } catch (e) {
         this.toast('打开失败：' + path)
         setTimeout(() => this.$page.finish(), 1500)
       }
+    },
+    startChapterScan() {
+      if (this._chScanner) return
+      if (this.chapters.length || this.chScanPct === 100) return
+      this._chScanner = new ChapterScanner(this._text || '')
+      this.chScanPct = 0
+      const tick = () => {
+        const sc = this._chScanner
+        if (!sc) return
+        sc.step(400000)
+        this.chScanPct = sc.progress()
+        if (!sc.done) {
+          this._chTimer = setTimeout(tick, 0)
+          return
+        }
+        this.chapters = sc.chapters
+        this.chScanPct = 100
+        this.saveLayoutCache()
+      }
+      tick()
+    },
+    chapterPct(c) {
+      if (this.pagingPct < 100) return ''
+      const total = pageCount(this.offsets)
+      const p = Math.min(pageOfOffset(this.offsets, c.offset), total - 1)
+      return Math.round((p + 1) * 100 / total) + '%'
+    },
+    setTab(tab, e) {
+      this.stop(e)
+      this.sidebarTab = tab
+    },
+    gotoChapter(i, e) {
+      this.stop(e)
+      const c = this.chapters[i]
+      if (!c) return
+      const last = this.offsets[this.offsets.length - 1] || 0
+      if (this.pagingPct < 100 && c.offset > last) {
+        this.toast('该章节还在排版，稍等几秒')
+        return
+      }
+      this.page = Math.min(pageOfOffset(this.offsets, c.offset), pageCount(this.offsets) - 1)
+      this.updatePct()
+      this.queueSave()
+    },
+    prevChapter(e) {
+      this.stop(e)
+      const i = this.curChapter
+      if (i > 0) this.gotoChapter(i - 1)
+      else if (i === 0) this.toast('已经是第一章')
+      else this.toast('未识别到章节')
+    },
+    nextChapter(e) {
+      this.stop(e)
+      const i = this.curChapter
+      if (i >= 0 && i < this.chapters.length - 1) this.gotoChapter(i + 1, e)
+      else if (this.chScanPct < 100) this.toast('章节解析中')
+      else if (i >= 0) this.toast('已经是最后一章')
+      else this.toast('未识别到章节')
     },
     turn(delta) {
       const total = pageCount(this.offsets)
@@ -285,6 +410,9 @@ export default {
       const keep = this.offsets[this.page] || 0
       this.fontSize = size
       lib.saveSettings({ fontSize: size })
+      this._sig = this.layoutSig(getScreen())
+      this._chScanner = null
+      this.chScanPct = 100
       this.repaginate(keep)
     },
     // 三个点击分区：左=上一页，右=下一页，中=侧边栏（click 驱动，两种阅读方式都可用）
@@ -357,6 +485,9 @@ export default {
     this.flushSave()
     if (this._saveTimer) clearTimeout(this._saveTimer)
     if (this._pagingTimer) clearTimeout(this._pagingTimer)
+    if (this._chTimer) clearTimeout(this._chTimer)
+    this._chScanner = null
+    this.saveLayoutCache()
   }
 }
 
@@ -613,43 +744,69 @@ function touchPoint(e) {
 .sjumptext { color: #8ca0ad; font-size: 4.33vh; }
 .spageinfo { flex: 1; color: #4fd6c3; font-size: 4.33vh; text-align: center; }
 
-.smarks { margin-top: 2.36vh; }
-.smarksh { height: 7.09vh; }
-.marklist { width: 34vw; height: 23.62vh; }
-.mrow0 { padding: 0.5vw; }
-.markempty { color: #5c7182; font-size: 4.33vh; }
-.markrow { flex-direction: row; align-items: center; height: 11.02vh; }
-.markmain { flex: 1; flex-direction: row; align-items: center; }
-.markpage { color: #f5b85c; font-size: 4.33vh; width: 5vw; }
-.markpreview {
-  flex: 1;
-  color: #8ca0ad;
-  font-size: 4.33vh;
-  lines: 1;
-  text-overflow: ellipsis;
-  margin-right: 1vw;
-}
-.markdel {
-  width: 4.25vw;
-  height: 8.66vh;
-  border-radius: 0.75vw;
-  background-color: #19242f;
+.stab {
+  height: 24px;
+  border-radius: 7px;
   align-items: center;
   justify-content: center;
+  padding-left: 12px;
+  padding-right: 12px;
+  margin-right: 6px;
 }
-.markdeltext { color: #ff6b72; font-size: 3.94vh; }
-.msep { position: absolute; left: 0vw; bottom: 0vh; width: 34vw; height: 0.39vh; background-color: #1b2530; }
-
-.sfoot { margin-top: 1.97vh; flex-direction: row; }
-.sback {
-  width: 34vw;
-  height: 10.24vh;
-  border-radius: 1vw;
+.tabon { background-color: #123a37; }
+.taboff { background-color: #19242f; }
+.stabtext { font-size: 11px; }
+.tabontext { color: #4fd6c3; }
+.tabofftext { color: #8ca0ad; }
+.chnav {
+  height: 24px;
+  border-radius: 7px;
   background-color: #19242f;
   border-width: 1px;
   border-color: #263340;
   align-items: center;
   justify-content: center;
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-left: 6px;
 }
+.chnavtext { color: #8ca0ad; font-size: 11px; }
+.slist { margin-top: 5px; height: 74px; }
+.listhint { color: #5c7182; font-size: 11px; padding-top: 4px; }
+.chapterlist { width: 272px; height: 74px; }
+.chrow { flex-direction: row; align-items: center; height: 26px; border-radius: 6px; padding-left: 6px; padding-right: 6px; }
+.chrowOn { background-color: #123a37; }
+.chrowOff { background-color: transparent; }
+.chtext {
+  flex: 1;
+  font-size: 11px;
+  lines: 1;
+  text-overflow: ellipsis;
+  margin-right: 8px;
+}
+.chtextOn { color: #4fd6c3; }
+.chtextOff { color: #8ca0ad; }
+.chpct { font-size: 10px; }
+.markrow { flex-direction: row; align-items: center; height: 28px; }
+.markmain { flex: 1; flex-direction: row; align-items: center; }
+.markpage { color: #f5b85c; font-size: 11px; width: 40px; }
+.markpreview {
+  flex: 1;
+  color: #8ca0ad;
+  font-size: 11px;
+  lines: 1;
+  text-overflow: ellipsis;
+  margin-right: 8px;
+}
+.markdel {
+  width: 34px;
+  height: 22px;
+  border-radius: 6px;
+  background-color: #19242f;
+  align-items: center;
+  justify-content: center;
+}
+.markdeltext { color: #ff6b72; font-size: 10px; }
+.msep { position: absolute; left: 0px; bottom: 0px; width: 272px; height: 1px; background-color: #1b2530; }
 .sbacktext { color: #8ca0ad; font-size: 4.72vh; }
 </style>

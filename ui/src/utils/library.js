@@ -5,6 +5,7 @@ const K_SHELF = 'nr_shelf_v1'
 const K_PROGRESS = 'nr_progress_v1'
 const K_MARKS = 'nr_marks_v1'
 const K_SETTINGS = 'nr_settings_v1'
+const K_LAYOUT = 'nr_layout_v1_'
 
 export function bookId(path) {
   let h = 5381
@@ -91,6 +92,20 @@ export async function removeMark(id, offset) {
   all[id] = list.filter(m => m.offset !== offset)
   await kv.setItem(K_MARKS, all)
   return all[id]
+}
+
+// 排版缓存：每本书一条 {sig, len, offsets, chapters}，字号/屏幕变化时签名失效自动重排
+export async function saveLayoutCache(id, payload) {
+  return kv.setItem(K_LAYOUT + id, payload)
+}
+
+export async function getLayoutCache(id) {
+  const c = await kv.getItem(K_LAYOUT + id, null)
+  return c && typeof c === 'object' ? c : null
+}
+
+export async function clearLayoutCache(id) {
+  return kv.setItem(K_LAYOUT + id, null)
 }
 
 export async function getSettings() {

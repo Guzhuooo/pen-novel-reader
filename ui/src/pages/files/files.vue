@@ -43,12 +43,10 @@ import actionSheet from '../../components/action-sheet.vue'
 import appToast from '../../components/app-toast.vue'
 
 const ROOT = '/userdisk'
-// 系统目录与巨型媒体目录，扫描时跳过
-const SKIP_DIRS = ['miniapp', 'lost+found', 'pstore', 'database', 'corefile', 'swap',
-  'record', 'Music', 'Videos', 'Pictures', 'Video', 'browser', 'mcserver', 'tailscale',
-  'cloudbrowser-update', 'adb_persist', 'uresource', 'opt', 'Favorite']
-const MAX_DEPTH = 4
-const MAX_FOUND = 200
+// 扫描范围覆盖整个 /userdisk，只跳过这几个系统/异常目录（其余一律扫）
+const SKIP_DIRS = ['miniapp', 'lost+found', 'corefile', 'swap']
+const MAX_DEPTH = 8
+const MAX_FOUND = 500
 
 function fmtSize(n) {
   if (n >= 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB'
@@ -91,7 +89,8 @@ export default {
       let dirs = []
       try {
         const list = await fs.listDir(path)
-        dirs = list.filter(it => it.isDir && it.name.charAt(0) !== '.' && SKIP_DIRS.indexOf(it.name) === -1)
+        // 浏览不设限：/userdisk 下所有目录都可进入
+        dirs = list.filter(it => it.isDir && it.name.charAt(0) !== '.')
       } catch (e) {
         this.scanning = false
         this.toast('目录读取失败')
